@@ -90,9 +90,10 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
     }
   }, [type, items])
 
-  if (!items.length) return null
   const last = daily[daily.length - 1]
-  const pct = daily.length > 1 && daily[0].value ? Math.round(((last?.value || 0) - daily[0].value) / Math.abs(daily[0].value) * 100) : 6
+  const pct = daily.length > 1 && daily[daily.length - 2].value
+    ? Math.round(((last?.value || 0) - daily[daily.length - 2].value) / Math.abs(daily[daily.length - 2].value) * 100)
+    : null
 
   return (
     <section className="trend-grid">
@@ -101,7 +102,7 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
           <div><span className="eyebrow">Tiempo real</span><h2>{title} ●</h2><small className="trend-sub">{subtitle}</small></div>
           {last && <span className="trend-badge">{type === 'expenses' || type === 'sales' || type === 'recoveries' ? `S/ ${number(last.value)}` : number(last.value)}</span>}
         </div>
-        <ResponsiveContainer width="100%" height={250}>
+        {daily.length ? <ResponsiveContainer width="100%" height={250}>
           <AreaChart data={daily} margin={{ top: 18, right: 12, left: -8, bottom: 0 }}>
             <defs>
               <linearGradient id={`g1-${type}`} x1="0" y1="0" x2="0" y2="1">
@@ -122,7 +123,7 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
               <Area type="monotone" dataKey={type === 'production' ? 'socio' : 'value2'} name={label2} stroke={WHITE} strokeWidth={2.5} fill={`url(#g2-${type})`} dot={false} />
             )}
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : <div className="trend-empty"><span>La progresión aparecerá cuando registres el primer valor.</span></div>}
         <div className="trend-legend">
           <span><i style={{ background: YELLOW }} />{label1}</span>
           {label2 && <span><i style={{ background: WHITE }} />{label2}</span>}
@@ -130,10 +131,10 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
       </article>
 
       <article className="panel glass trend-side">
-        <span className="eyebrow">{type === 'expenses' ? 'Últimas ventas' : 'Resumen'}</span>
+        <span className="eyebrow">{type === 'expenses' ? 'Resumen de gastos' : 'Resumen'}</span>
         <div className="trend-spark">
           <svg viewBox="0 0 100 28" width="86" height="24"><polyline points={daily.map((d, i) => `${(i / Math.max(1, daily.length - 1)) * 98 + 1},${26 - (d.value / Math.max(1, ...daily.map((x) => x.value))) * 22}`).join(' ')} fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round" /></svg>
-          <span className="trend-pct">◉ {pct}%</span>
+          <span className="trend-pct">{pct===null?'Sin comparación':`${pct>=0?'▲':'▼'} ${Math.abs(pct)}%`}</span>
         </div>
         <strong className="trend-total">
           {type === 'expenses' ? `S/ ${number(total)}` : type === 'sales' ? `S/ ${number(total)}` : type === 'recoveries' ? `S/ ${number(total)}` : `${number(total)} sacos`}

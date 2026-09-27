@@ -2,23 +2,28 @@ services:
   - type: web
     name: mina-omar-miranda
     runtime: docker
-    plan: starter
-    autoDeploy: true
+    plan: 0.5c-512mb
+    region: oregon
     healthCheckPath: /api/status
-    disk:
-      name: mina-data
-      mountPath: /app/data
-      sizeGB: 1
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3001
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: SESSION_HOURS
+        value: 24
       - key: DATABASE_URL
         value: /app/data/mina-omar-miranda.db
       - key: STORAGE_URL
         value: /app/data/uploads
-      - key: SESSION_HOURS
-        value: 12
-      - key: AUTH_SECRET
+      - key: ADMIN_NAME
         sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: mina-data
+      mountPath: /app/data
+      sizeGB: 1

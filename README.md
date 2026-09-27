@@ -31,7 +31,22 @@ La API escucha en `http://localhost:3001`. En desarrollo, Vite sirve la interfaz
 
 ## Variables de entorno
 
-Copie `.env.example` a `.env` y cambie `AUTH_SECRET` por un valor largo y aleatorio. `DATABASE_URL` define la base SQLite y `STORAGE_URL` el directorio privado de comprobantes. `ADMIN_EMAIL` y `ADMIN_PASSWORD` se reservan para una futura inicialización automatizada; la instalación actual usa el flujo de primer acceso para evitar contraseñas escritas en archivos.
+Copie `.env.example` a `.env` y cambie `AUTH_SECRET` por un valor largo y aleatorio. `DATABASE_URL` define la base SQLite y `STORAGE_URL` el directorio privado de comprobantes. Si la base todavía no tiene usuarios, `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` permiten crear el administrador inicial de forma automática; nunca confirme esos valores dentro del repositorio.
+
+## Publicación 24/7
+
+El archivo `render.yaml` prepara un servicio web Node en contenedor permanente en Render con HTTPS, dominio público y un disco persistente de 1 GB. La base y los comprobantes se guardan bajo `/app/data`, por lo que sobreviven a reinicios y nuevos despliegues. El servicio usa `/api/status` como comprobación de salud y despliega automáticamente cada cambio de `main`.
+
+1. Cree un repositorio **privado** en GitHub y suba la rama `main`.
+2. En Render seleccione **New → Blueprint**, conecte ese repositorio y deje que lea `render.yaml`.
+3. Introduzca `ADMIN_NAME`, `ADMIN_EMAIL` y una `ADMIN_PASSWORD` de 10 caracteres o más cuando Render las solicite.
+4. Confirme el servicio de pago con disco persistente. La modalidad gratuita no es adecuada: se suspende por inactividad y pierde SQLite y archivos locales al reiniciarse.
+
+Render generará `AUTH_SECRET` automáticamente. No cambie `DATABASE_URL` ni `STORAGE_URL` salvo que también cambie el punto de montaje del disco.
+
+## Gráficos de progresión
+
+Producción, Gastos, Recuperaciones, Liquidaciones y Ventas muestran un panel de evolución antes de sus tablas. Los gráficos se recalculan con el filtro de labor y la búsqueda actuales; combinan líneas de colores, acumulados, comparación temporal y distribución por labor o categoría según corresponda.
 
 ## Base de datos y migraciones
 

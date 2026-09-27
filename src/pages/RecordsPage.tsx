@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Plus, Search, SlidersHorizontal, FileImage, Trash2, Pencil, PackageOpen } from 'lucide-react'
+import { Plus, Search, SlidersHorizontal, FileImage, Trash2, PackageOpen } from 'lucide-react'
 import { api, number, soles, timeNow, today } from '../lib/api'
 import Modal from '../components/Modal'
 import TrendCharts from '../components/TrendCharts'

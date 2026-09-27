@@ -19,6 +19,22 @@ const uploadDir = path.resolve(root, process.env.STORAGE_URL || './uploads')
 fs.mkdirSync(uploadDir, { recursive: true })
 migrate()
 
+function bootstrapAdminFromEnvironment() {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase()
+  const password = process.env.ADMIN_PASSWORD
+  const name = process.env.ADMIN_NAME?.trim() || 'Administrador'
+  const users = Number((db.prepare('SELECT COUNT(*) count FROM users').get() as { count: number }).count)
+  if (users || !email || !password) return
+  if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 10) {
+    throw new Error('ADMIN_EMAIL debe ser válido y ADMIN_PASSWORD debe tener al menos 10 caracteres')
+  }
+  const result = db.prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,'admin')")
+    .run(name, email, hashPassword(password))
+  audit(Number(result.lastInsertRowid), 'CREATE', 'User', Number(result.lastInsertRowid), { role: 'admin', source: 'environment' })
+}
+
+bootstrapAdminFromEnvironment()
+
 const app = express()
 app.set('trust proxy', 1)
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' }, contentSecurityPolicy: false }))
