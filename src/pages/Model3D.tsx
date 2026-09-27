@@ -181,7 +181,7 @@ export default function Model3D(){
   const move=useRef<MoveState>({x:0,z:0,lookX:0,lookY:0})
   const touchDevice=matchMedia('(pointer: coarse)').matches
   const mobile=matchMedia('(max-width: 760px)').matches||((navigator.hardwareConcurrency||8)<=4)
-  const url=mobile?'/models/mine-mobile.glb':'/models/mine.glb'
+  const url=new URL(`models/${mobile?'mine-mobile.glb':'mine.glb'}`,document.baseURI).href
   const handlePosition=useCallback((value:THREE.Vector3)=>setPosition(value.clone()),[])
   const enterWalk=()=>{setMode('walk');move.current={x:0,z:0,lookX:0,lookY:0}}
   const exitWalk=()=>{document.exitPointerLock?.();setMode('exterior');move.current={x:0,z:0,lookX:0,lookY:0}}

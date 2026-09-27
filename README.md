@@ -1,123 +1,71 @@
 # MINA OMAR MIRANDA
 
-Aplicación web local para administrar labores, un socio responsable por labor, producción, gastos y comprobantes, recuperación de gastos, liquidaciones, ventas, reportes, auditoría, recorrido 2D y el modelo 3D real de la mina.
+Aplicación web gratuita para administrar labores, producción, gastos, recuperaciones, liquidaciones y ventas, con gráficos glassmorphism, reportes, auditoría, plano 2D y recorrido interno en primera persona sobre el GLB real de la mina.
 
-## Requisitos
+## Sitio público 24/7
 
-- Windows 10/11
-- Node.js 24 o superior (la base usa `node:sqlite`)
-- Navegador moderno con WebGL: Chrome, Edge, Firefox o Safari
+La aplicación se publica automáticamente con GitHub Pages mediante `.github/workflows/pages.yml`. No usa Render, tarjetas, suscripciones ni servidores de pago.
 
-## Instalación y ejecución local
+- URL prevista: `https://gerauquezada.github.io/mina/`
+- Cada cambio enviado a `main` ejecuta pruebas, compila y actualiza el sitio.
+- GitHub sirve los archivos estáticos con HTTPS y disponibilidad continua.
+
+GitHub Pages no ejecuta Node, Express ni SQLite. Por esa razón, la versión pública guarda cuentas, registros y comprobantes en el almacenamiento local de cada navegador. Los datos de un teléfono no aparecen automáticamente en otro teléfono. Use **Reportes** para descargar respaldos CSV o Excel.
+
+## Uso local
 
 ```powershell
 Set-Location 'D:\MINA-OMAR-MIRANDA'
-Copy-Item .env.example .env
 npm install
-npm run dev
+npm run dev:web
 ```
 
-Abra `http://localhost:5173`. En el primer acceso, el sistema muestra un formulario seguro para crear el administrador inicial. La contraseña se procesa con `scrypt`, se guarda únicamente como hash y no forma parte del frontend ni del repositorio.
-
-Para probar la versión compilada:
-
-```powershell
-npm run build
-$env:NODE_ENV='production'
-npm start
-```
-
-La API escucha en `http://localhost:3001`. En desarrollo, Vite sirve la interfaz y reenvía las llamadas a la API.
-
-## Variables de entorno
-
-Copie `.env.example` a `.env` y cambie `AUTH_SECRET` por un valor largo y aleatorio. `DATABASE_URL` define la base SQLite y `STORAGE_URL` el directorio privado de comprobantes. Si la base todavía no tiene usuarios, `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` permiten crear el administrador inicial de forma automática; nunca confirme esos valores dentro del repositorio.
-
-## Publicación 24/7
-
-El archivo `render.yaml` prepara un servicio web Node en contenedor permanente en Render con HTTPS, dominio público y un disco persistente de 1 GB. La base y los comprobantes se guardan bajo `/app/data`, por lo que sobreviven a reinicios y nuevos despliegues. El servicio usa `/api/status` como comprobación de salud y despliega automáticamente cada cambio de `main`.
-
-1. Cree un repositorio **privado** en GitHub y suba la rama `main`.
-2. En Render seleccione **New → Blueprint**, conecte ese repositorio y deje que lea `render.yaml`.
-3. Introduzca `ADMIN_NAME`, `ADMIN_EMAIL` y una `ADMIN_PASSWORD` de 10 caracteres o más cuando Render las solicite.
-4. Confirme el servicio de pago con disco persistente. La modalidad gratuita no es adecuada: se suspende por inactividad y pierde SQLite y archivos locales al reiniciarse.
-
-Render generará `AUTH_SECRET` automáticamente. No cambie `DATABASE_URL` ni `STORAGE_URL` salvo que también cambie el punto de montaje del disco.
+Abra `http://localhost:5173/mina/`. En el primer acceso se crea el administrador local del dispositivo. La contraseña se transforma en un hash SHA-256 mediante Web Crypto antes de guardarse; nunca se incluye en GitHub.
 
 ## Gráficos de progresión
 
-Producción, Gastos, Recuperaciones, Liquidaciones y Ventas muestran un panel de evolución antes de sus tablas. Los gráficos se recalculan con el filtro de labor y la búsqueda actuales; combinan líneas de colores, acumulados, comparación temporal y distribución por labor o categoría según corresponda.
+Producción, Gastos, Recuperaciones, Liquidaciones y Ventas muestran paneles de evolución que responden al filtro de labor y a la búsqueda actual. Incluyen líneas de colores, acumulados y distribuciones por labor o categoría.
 
-## Base de datos y migraciones
+## Modelo 3D y recorrido interno
 
-La instalación local usa SQLite real con WAL, claves foráneas, restricciones e índices. Se eligió por ser autocontenida, fiable y no requerir instalar un servidor de PostgreSQL en el equipo. El acceso está concentrado en `server/db.ts`, por lo que una migración futura a PostgreSQL puede realizarse sin cambiar la interfaz.
+`public/models/mine.glb` conserva el modelo original y `public/models/mine-mobile.glb` mantiene la misma geometría con texturas optimizadas para teléfonos.
 
-Al iniciar, las tablas e índices se crean de forma idempotente. Los datos quedan en `data/mina-omar-miranda.db`. Haga copias de seguridad de `data/` y `uploads/` con la aplicación detenida.
+El modo **Recorrido** usa navegación en primera persona:
 
-## Seguridad
+- WASD o flechas y ratón con Pointer Lock en escritorio.
+- Joystick izquierdo y arrastre derecho en móvil.
+- Movimiento relativo a la mirada, gravedad y altura humana.
+- Colisiones contra los triángulos reales mediante `three-mesh-bvh`.
+- Detección automática de una entrada transitable y coordenadas X/Y/Z de depuración.
 
-- Sesiones aleatorias almacenadas en base de datos, con cookie `HttpOnly` y `SameSite=Strict`.
-- Hash de contraseña mediante `scrypt` y comparación en tiempo constante.
-- API protegida, control de rol administrador, rate limiting en autenticación y auditoría.
-- Validación backend con Zod, consultas parametrizadas y restricciones de integridad en SQLite.
-- Comprobantes limitados a JPG, PNG, WebP o PDF, con máximo de 8 MB y acceso autenticado.
-- Borrado lógico para producción y gastos financieros.
+La reserva manual está en `src/three/walkConfig.ts`, en `WALK_START_POSITION` y `WALK_START_TARGET`. No se modifica ni se reconstruye la geometría visible del GLB.
 
-En producción detrás de HTTPS, configure `NODE_ENV=production` para activar cookies `Secure`.
+## Persistencia gratuita
 
-## Modelo 3D
+- La información queda en `localStorage` del navegador actual.
+- La sesión activa queda en `sessionStorage`.
+- Los comprobantes admiten hasta 1 MB para respetar el límite del navegador.
+- Limpiar los datos del sitio elimina los registros locales.
+- Para usar otro dispositivo se crea allí una cuenta local nueva.
 
-El ZIP recibido contenía `Se ve bien.glb`. Se inspeccionó y se integró sin reemplazarlo:
+Esta arquitectura es la única forma de alojar todo gratuitamente solo con GitHub Pages. Para sincronización entre dispositivos haría falta un servicio externo de base de datos.
 
-- GLB 2.0, 43.93 MB.
-- 16 mallas, 16 materiales y 16 texturas JPEG.
-- Aproximadamente 236,409 vértices procesados por pasada.
-- Caja envolvente aproximada: `22.25 × 25.01 × 46.96` unidades.
-- Texturas originales de 4096×4096, con consumo elevado de GPU en conjunto.
-
-`public/models/mine.glb` conserva la calidad original para PC. `public/models/mine-mobile.glb` conserva la misma geometría y reduce las texturas a un máximo de 1024 px; el archivo baja a 4.63 MB para móviles. El visor elige la variante según pantalla/capacidad y carga el GLB solamente al abrir el módulo 3D.
-
-El modo **Recorrido** es navegación interna en primera persona, no una animación. En escritorio usa WASD o flechas, ratón con Pointer Lock, movimiento relativo a la dirección de la cámara, gravedad y altura de ojos. En móvil muestra un joystick analógico izquierdo y una zona táctil derecha para mirar.
-
-Las colisiones se calculan contra los triángulos reales del GLB. Al cargar el modelo, `StaticGeometryGenerator` combina las 16 mallas únicamente para crear un collider invisible y `three-mesh-bvh` construye un BVH. El controlador utiliza una cápsula y `shapecast`, evitando raycast contra todos los triángulos en cada cuadro. La geometría y los materiales visibles no se modifican.
-
-Al cargar, el visor analiza superficies, altura libre y aperturas laterales para escoger una entrada transitable próxima al borde del escaneo. La reserva editable se define en `src/three/walkConfig.ts` mediante `WALK_START_POSITION` y `WALK_START_TARGET`; se utiliza si no se detecta una entrada fiable. Durante el recorrido aparece un panel con las coordenadas X/Y/Z actuales para poder afinar manualmente la ubicación. El sistema calcula el bounding box, bounding sphere, altura, radio, velocidad y planos de cámara a partir de las dimensiones reales del modelo.
-
-Para reemplazar el modelo:
-
-1. Detenga la aplicación.
-2. Reemplace `public/models/mine.glb` con otro GLB compatible.
-3. Genere la variante móvil:
-
-```powershell
-npx @gltf-transform/cli resize public/models/mine.glb public/models/mine-mobile.glb --width 1024 --height 1024
-```
-
-4. Actualice la fila activa de `model3d` si desea conservar metadatos/versiones adicionales.
-
-## Cálculos históricos
-
-Todos los importes se guardan en céntimos para evitar errores decimales. Cada producción, gasto y liquidación guarda una copia de los porcentajes Mina/Socio aplicados; cambiar una labor de 50/50 a 60/40 no modifica su historia.
-
-## Pruebas
+## Pruebas y compilación
 
 ```powershell
 npm test
+npm run build
 ```
 
-Las pruebas cubren reparto 50/50, porcentaje personalizado, gastos, recuperación pendiente, ventas y validación de porcentajes.
+Las pruebas cubren reparto 50/50, porcentajes personalizados, gastos, recuperaciones, ventas y validación de porcentajes. La compilación genera `dist/`, que GitHub Actions publica automáticamente.
 
-## Estructura
+## Estructura principal
 
-- `src/pages/`: dashboard, módulos administrativos, reportes, mapa y 3D.
-- `src/components/`: navegación, modales y componentes compartidos.
-- `server/index.ts`: API protegida, archivos y exportaciones.
-- `server/db.ts`: esquema relacional, índices y auditoría.
-- `server/calculations.ts`: reglas de negocio centralizadas.
-- `data/`: base SQLite (no se versiona).
-- `uploads/`: comprobantes privados (no se versionan).
+- `src/lib/api.ts`: base local y reglas de persistencia del navegador.
+- `src/pages/`: dashboard, registros, reportes, mapa y visor 3D.
+- `src/components/TrendCharts.tsx`: gráficos de progresión.
+- `src/three/walkConfig.ts`: posición y objetivo configurables del recorrido.
 - `public/models/`: GLB original y variante móvil.
+- `.github/workflows/pages.yml`: prueba, compilación y publicación gratuita.
 
-## Despliegue
-
-Esta entrega está configurada para uso local en el disco D, tal como se solicitó. Para exponerla a Internet se requiere HTTPS, copias de seguridad, almacenamiento de objetos para comprobantes y una base PostgreSQL administrada; no publique directamente el puerto local sin esas medidas.
+El directorio `server/` se conserva únicamente como referencia de la versión local con SQLite; GitHub Pages no lo ejecuta.
