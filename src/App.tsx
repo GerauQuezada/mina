@@ -12,6 +12,8 @@ import Model3D from './pages/Model3D'
 import Reports from './pages/Reports'
 import Audit from './pages/Audit'
 import Settings from './pages/Settings'
+import Debts from './pages/Debts'
+import Sales from './pages/Sales'
 
 export type User={id:number;name:string;email:string;role:string}
 
@@ -25,9 +27,7 @@ export default function App(){
     <Route path="labores" element={<Labors/>}/><Route path="labores/:id" element={<LaborDetail/>}/>
     <Route path="produccion" element={<RecordsPage type="production"/>}/>
     <Route path="gastos" element={<RecordsPage type="expenses"/>}/>
-    <Route path="recuperacion" element={<RecordsPage type="recoveries"/>}/>
-    <Route path="liquidaciones" element={<RecordsPage type="liquidations"/>}/>
-    <Route path="ventas" element={<RecordsPage type="sales"/>}/>
+    <Route path="ventas" element={<Sales/>}/><Route path="prestamos" element={<Debts/>}/>
     <Route path="recorrido" element={<MineMap/>}/><Route path="modelo-3d" element={<Model3D/>}/>
     <Route path="reportes" element={<Reports/>}/><Route path="historial" element={<Audit/>}/>
     <Route path="configuracion" element={<Settings user={user}/>}/>

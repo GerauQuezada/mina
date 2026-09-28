@@ -2,7 +2,7 @@
   "compilerOptions": {
     "composite": true,
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -10,5 +10,5 @@
     "strict": true,
     "noEmit": true
   },
-  "include": ["vite.config.ts", "server/**/*.ts", "tests/**/*.ts"]
+  "include": ["vite.config.ts", "server/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "src/lib/**/*.ts", "src/three/**/*.ts"]
 }

@@ -30,7 +30,7 @@ function groupBy(items: any[], dateKey: string, valueFn: (x: any) => number, val
 
 const tooltipStyle = { background: '#111714', border: '1px solid #ffffff20', borderRadius: 14, color: '#fff' } as const
 
-export default function TrendCharts({ type, items }: { type: PageType; items: any[] }) {
+export default function TrendCharts({ type, items, currency='PEN' }: { type: PageType; items: any[]; currency?:string }) {
   const { daily, total, total2, label1, label2, title, subtitle, pieData, barData } = useMemo(() => {
     if (type === 'production') {
       const daily = groupBy(items, 'date', (x) => x.sacks, (x) => x.mine_sacks)
@@ -62,12 +62,12 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
       }
     }
     if (type === 'sales') {
-      const daily = groupBy(items, 'sale_date', (x) => Number(x.total || 0), (x) => Number(x.sacks || 0))
+      const daily = groupBy(items, 'sale_date', (x) => Number(x.total || 0))
       return {
         daily, total: items.reduce((a, x) => a + Number(x.total || 0), 0),
-        total2: items.reduce((a, x) => a + Number(x.sacks || 0), 0),
-        label1: 'Ventas S/', label2: 'Sacos',
-        title: 'Ventas diarias', subtitle: 'Monto total y sacos vendidos',
+        total2: 0,
+        label1: `Ingresos ${currency}`, label2: '',
+        title: 'Ventas diarias', subtitle: 'Dinero recibido por fecha de venta',
         pieData: [], barData: [],
       }
     }
@@ -88,7 +88,7 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
       title: 'Liquidaciones', subtitle: 'Sacos y montos pagados',
       pieData: [], barData: [],
     }
-  }, [type, items])
+  }, [type, items, currency])
 
   const last = daily[daily.length - 1]
   const pct = daily.length > 1 && daily[daily.length - 2].value
@@ -100,7 +100,7 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
       <article className="panel glass trend-main">
         <div className="panel-head">
           <div><span className="eyebrow">Tiempo real</span><h2>{title} ●</h2><small className="trend-sub">{subtitle}</small></div>
-          {last && <span className="trend-badge">{type === 'expenses' || type === 'sales' || type === 'recoveries' ? `S/ ${number(last.value)}` : number(last.value)}</span>}
+          {last && <span className="trend-badge">{type === 'expenses' || type === 'sales' || type === 'recoveries' ? `${currency==='USD'?'US$':'S/'} ${number(last.value)}` : number(last.value)}</span>}
         </div>
         {daily.length ? <ResponsiveContainer width="100%" height={250}>
           <AreaChart data={daily} margin={{ top: 18, right: 12, left: -8, bottom: 0 }}>
@@ -119,7 +119,7 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
             <YAxis stroke="#82908a" fontSize={11} tickLine={false} axisLine={false} width={52} />
             <Tooltip contentStyle={tooltipStyle} labelFormatter={(_, p: any) => p?.[0]?.payload?.full || ''} />
             <Area type="monotone" dataKey="value" name={label1} stroke={YELLOW} strokeWidth={3} fill={`url(#g1-${type})`} dot={false} activeDot={{ r: 5, fill: YELLOW, stroke: '#000' }} />
-            {(type === 'production' || type === 'expenses' || type === 'sales' || type === 'liquidations') && (
+            {(type === 'production' || type === 'expenses' || type === 'liquidations') && (
               <Area type="monotone" dataKey={type === 'production' ? 'socio' : 'value2'} name={label2} stroke={WHITE} strokeWidth={2.5} fill={`url(#g2-${type})`} dot={false} />
             )}
           </AreaChart>
@@ -137,9 +137,9 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
           <span className="trend-pct">{pct===null?'Sin comparación':`${pct>=0?'▲':'▼'} ${Math.abs(pct)}%`}</span>
         </div>
         <strong className="trend-total">
-          {type === 'expenses' ? `S/ ${number(total)}` : type === 'sales' ? `S/ ${number(total)}` : type === 'recoveries' ? `S/ ${number(total)}` : `${number(total)} sacos`}
+          {type === 'expenses' ? `${currency==='USD'?'US$':'S/'} ${number(total)}` : type === 'sales' ? `${currency==='USD'?'US$':'S/'} ${number(total)}` : type === 'recoveries' ? `${currency==='USD'?'US$':'S/'} ${number(total)}` : `${number(total)} sacos`}
         </strong>
-        <small>{type === 'production' ? `Mina: ${number(total2)} · Socio: ${number(total - total2)}` : type === 'expenses' ? `Parte socio: S/ ${number(total2)}` : type === 'sales' ? `${number(total2)} sacos vendidos` : `${daily.length} días con registro`}</small>
+        <small>{type === 'production' ? `Mina: ${number(total2)} · Socio: ${number(total - total2)}` : type === 'expenses' ? `Parte socio: ${currency==='USD'?'US$':'S/'} ${number(total2)}` : type === 'sales' ? `${items.length} ventas · ${currency}` : `${daily.length} días con registro`}</small>
         {pieData.length > 0 && (
           <div className="trend-mini-pie">
             <ResponsiveContainer width="100%" height={150}>
@@ -150,7 +150,7 @@ export default function TrendCharts({ type, items }: { type: PageType; items: an
                 <Tooltip contentStyle={tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="legend mini">{pieData.slice(0, 4).map((x, i) => <span key={x.label}><i style={{ background: COLORS[i % COLORS.length] }} />{x.label}<b>{typeof x.value === 'number' && type === 'expenses' ? `S/ ${number(x.value)}` : number(x.value)}</b></span>)}</div>
+            <div className="legend mini">{pieData.slice(0, 4).map((x, i) => <span key={x.label}><i style={{ background: COLORS[i % COLORS.length] }} />{x.label}<b>{typeof x.value === 'number' && type === 'expenses' ? `${currency==='USD'?'US$':'S/'} ${number(x.value)}` : number(x.value)}</b></span>)}</div>
           </div>
         )}
         {!pieData.length && daily.length > 0 && (

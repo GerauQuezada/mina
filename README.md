@@ -1,16 +1,49 @@
 # MINA OMAR MIRANDA
 
-Aplicación web gratuita para administrar labores, producción, gastos, recuperaciones, liquidaciones y ventas, con gráficos glassmorphism, reportes, auditoría, plano 2D y recorrido interno en primera persona sobre el GLB real de la mina.
+Aplicación web privada para administrar labores, producción, gastos, préstamos, ventas y recorridos de la mina. La interfaz usa glassmorphism y está adaptada para escritorio y celular.
 
-## Sitio público 24/7
+## Sitio público y datos privados
 
-La aplicación se publica automáticamente con GitHub Pages mediante `.github/workflows/pages.yml`. No usa Render, tarjetas, suscripciones ni servidores de pago.
+La aplicación estática se publica gratuitamente con GitHub Pages mediante `.github/workflows/pages.yml`:
 
-- URL prevista: `https://gerauquezada.github.io/mina/`
-- Cada cambio enviado a `main` ejecuta pruebas, compila y actualiza el sitio.
-- GitHub sirve los archivos estáticos con HTTPS y disponibilidad continua.
+- Sitio: `https://gerauquezada.github.io/mina/`
+- El código y el modelo 3D publicados en GitHub Pages son públicos.
+- El panel y los datos operativos requieren la cuenta propietaria configurada en Supabase.
+- El registro público está desactivado y las políticas de base de datos impiden lecturas o escrituras anónimas.
 
-GitHub Pages no ejecuta Node, Express ni SQLite. Por esa razón, la versión pública guarda cuentas, registros y comprobantes en el almacenamiento local de cada navegador. Los datos de un teléfono no aparecen automáticamente en otro teléfono. Use **Reportes** para descargar respaldos CSV o Excel.
+No se usa Render, tarjeta de crédito ni un servidor de pago. Los planes gratuitos de GitHub Pages y Supabase tienen límites y no ofrecen una garantía contractual de disponibilidad 24/7; Supabase puede pausar proyectos gratuitos inactivos.
+
+## Funciones principales
+
+- Labores con socio y porcentaje configurable.
+- Labores propias cuya producción pertenece al propietario al 100%.
+- Dashboard con tres totales separados: participación en labores con socios, labores propias y total del propietario.
+- Fotografías para socios, préstamos con comprobantes y seguimiento de abonos.
+- Ventas con fecha, hora, peso, ley, ingreso y ganancia neta cuando se conocen los costos.
+- Precio actual del oro con estado de actualización y manejo de fallos de red.
+- Reportes, historial y respaldos completos en JSON.
+- Diseño responsive para teléfono y escritorio.
+
+## Modelo 3D y recorrido interno
+
+`public/models/mine.glb` conserva el modelo original. `public/models/mine-mobile.glb` mantiene la misma geometría con texturas optimizadas para teléfonos.
+
+El modo **Recorrido** incluye:
+
+- WASD o flechas y ratón con Pointer Lock en escritorio.
+- Joystick izquierdo y arrastre derecho en móvil.
+- Movimiento relativo a la mirada, gravedad y altura humana.
+- Colisiones contra la geometría real mediante `three-mesh-bvh`.
+- Detección de una posición interior transitable y coordenadas X/Y/Z de depuración.
+- Regreso al visor orbital con **Salir del recorrido**.
+
+Las coordenadas manuales de respaldo están en `src/three/walkConfig.ts`, en `WALK_START_POSITION` y `WALK_START_TARGET`. No se reconstruye ni modifica la geometría visible del GLB.
+
+## Configuración segura
+
+`public/cloud-config.json` contiene solamente la URL de Supabase y la clave pública publishable. Las contraseñas, la clave `service_role` y la contraseña de la base de datos nunca deben guardarse en GitHub.
+
+El esquema de tablas, política RLS y función de escritura está en `supabase/schema.sql`. Solo se debe ejecutar en el proyecto Supabase del propietario.
 
 ## Uso local
 
@@ -20,52 +53,27 @@ npm install
 npm run dev:web
 ```
 
-Abra `http://localhost:5173/mina/`. En el primer acceso se crea el administrador local del dispositivo. La contraseña se transforma en un hash SHA-256 mediante Web Crypto antes de guardarse; nunca se incluye en GitHub.
-
-## Gráficos de progresión
-
-Producción, Gastos, Recuperaciones, Liquidaciones y Ventas muestran paneles de evolución que responden al filtro de labor y a la búsqueda actual. Incluyen líneas de colores, acumulados y distribuciones por labor o categoría.
-
-## Modelo 3D y recorrido interno
-
-`public/models/mine.glb` conserva el modelo original y `public/models/mine-mobile.glb` mantiene la misma geometría con texturas optimizadas para teléfonos.
-
-El modo **Recorrido** usa navegación en primera persona:
-
-- WASD o flechas y ratón con Pointer Lock en escritorio.
-- Joystick izquierdo y arrastre derecho en móvil.
-- Movimiento relativo a la mirada, gravedad y altura humana.
-- Colisiones contra los triángulos reales mediante `three-mesh-bvh`.
-- Detección automática de una entrada transitable y coordenadas X/Y/Z de depuración.
-
-La reserva manual está en `src/three/walkConfig.ts`, en `WALK_START_POSITION` y `WALK_START_TARGET`. No se modifica ni se reconstruye la geometría visible del GLB.
-
-## Persistencia gratuita
-
-- La información queda en `localStorage` del navegador actual.
-- La sesión activa queda en `sessionStorage`.
-- Los comprobantes admiten hasta 1 MB para respetar el límite del navegador.
-- Limpiar los datos del sitio elimina los registros locales.
-- Para usar otro dispositivo se crea allí una cuenta local nueva.
-
-Esta arquitectura es la única forma de alojar todo gratuitamente solo con GitHub Pages. Para sincronización entre dispositivos haría falta un servicio externo de base de datos.
+Abra `http://localhost:5173/mina/` e inicie sesión con la cuenta propietaria creada en Supabase.
 
 ## Pruebas y compilación
 
 ```powershell
 npm test
+npx tsc -b
 npm run build
 ```
 
-Las pruebas cubren reparto 50/50, porcentajes personalizados, gastos, recuperaciones, ventas y validación de porcentajes. La compilación genera `dist/`, que GitHub Actions publica automáticamente.
+Las pruebas cubren autenticación privada, separación de producción propia/compartida, préstamos, ventas, respaldos, concurrencia, validación y movimiento con colisiones sobre la geometría real.
 
 ## Estructura principal
 
-- `src/lib/api.ts`: base local y reglas de persistencia del navegador.
-- `src/pages/`: dashboard, registros, reportes, mapa y visor 3D.
-- `src/components/TrendCharts.tsx`: gráficos de progresión.
-- `src/three/walkConfig.ts`: posición y objetivo configurables del recorrido.
+- `src/lib/cloud.ts`: sesión y sincronización con Supabase.
+- `src/lib/api.ts`: reglas de negocio y persistencia.
+- `src/pages/`: dashboard, registros, reportes, configuración y visor 3D.
+- `src/three/walkPhysics.ts`: física compartida del recorrido.
+- `src/three/walkConfig.ts`: posición y objetivo configurables.
 - `public/models/`: GLB original y variante móvil.
-- `.github/workflows/pages.yml`: prueba, compilación y publicación gratuita.
+- `supabase/schema.sql`: esquema y seguridad de datos.
+- `.github/workflows/pages.yml`: prueba, compilación y publicación.
 
-El directorio `server/` se conserva únicamente como referencia de la versión local con SQLite; GitHub Pages no lo ejecuta.
+El directorio `server/` se conserva como referencia histórica de la versión local con SQLite; GitHub Pages no lo ejecuta.
