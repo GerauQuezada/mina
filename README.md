@@ -33,7 +33,7 @@ El modo **Recorrido** incluye:
 - WASD o flechas y ratón con Pointer Lock en escritorio.
 - Joystick izquierdo y arrastre derecho en móvil.
 - Movimiento relativo a la mirada, gravedad y altura humana.
-- Colisión selectiva: las paredes amplias son sólidas, mientras soportes delgados, ruido del escaneo y zonas angostas no bloquean; la gravedad mantiene la cámara sobre el suelo real.
+- Colisión selectiva: las paredes amplias son sólidas, mientras soportes delgados, ruido del escaneo y zonas angostas no bloquean. Cinco sondas siguen el suelo real y conservan la altura ante huecos del escaneo.
 - Detección de una posición interior transitable y coordenadas X/Y/Z de depuración.
 - Regreso al visor orbital con **Salir del recorrido**.
 

@@ -57,16 +57,20 @@ test('selective walkthrough crosses a thin obstacle but stops at a broad wall',(
     scene.add(floor,blocker)
     return createRuntime(scene)
   }
-  const cross=(runtime:ReturnType<typeof createRuntime>)=>{
+  const cross=(runtime:ReturnType<typeof createRuntime>,seconds=4)=>{
     const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
     const velocity=new THREE.Vector3(0,0,runtime.metrics.speed)
-    for(let tick=0;tick<120*4;tick++)stepWalkExplore(position,velocity,runtime,1/120)
+    for(let tick=0;tick<120*seconds;tick++)stepWalkExplore(position,velocity,runtime,1/120)
     return position
   }
-  const pastPost=cross(makeRuntime(.05))
+  const postRuntime=makeRuntime(.05)
+  const pastPost=cross(postRuntime)
   assert.ok(pastPost.z>.5,'thin supports and scan obstacles must not trap the visitor')
   const wallRuntime=makeRuntime(10)
   const beforeWall=cross(wallRuntime)
   assert.ok(beforeWall.z<0,'a continuous mine wall must remain solid')
   assert.ok(Math.abs(beforeWall.y-wallRuntime.metrics.eyeHeight)<.01,'the visitor remains on the floor')
+  const overScanHole=cross(postRuntime,12)
+  assert.ok(overScanHole.z>5,'the diagnostic path reaches beyond the scanned floor edge')
+  assert.ok(Math.abs(overScanHole.y-postRuntime.metrics.eyeHeight)<.01,'a missing floor triangle never drops or resets the visitor')
 })

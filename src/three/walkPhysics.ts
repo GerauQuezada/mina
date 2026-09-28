@@ -31,6 +31,7 @@ const wallDirection=new THREE.Vector3()
 const wallSide=new THREE.Vector3()
 const wallHeightFactors=[-.72,-.4,-.08]
 const wallSideFactors=[-1.25,0,1.25]
+const floorProbeOffsets=[[0,0],[-.38,0],[.38,0],[0,-.38],[0,.38]] as const
 const scanRaycaster=new THREE.Raycaster()
 const scanDirections=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1)]
 
@@ -204,23 +205,25 @@ export function stepWalkExplore(position:THREE.Vector3,velocity:THREE.Vector3,ru
     velocity.x*=.35;velocity.z*=.35
   }
 
-  const {eyeHeight}=runtime.metrics
+  const {eyeHeight,radius}=runtime.metrics
   const maxStep=eyeHeight*.55
-  velocity.y-=runtime.metrics.gravity*delta
-  position.y+=velocity.y*delta
-  groundOrigin.set(position.x,stepPrevious.y+maxStep,position.z)
-  floorRaycaster.set(groundOrigin,downDirection);floorRaycaster.near=0;floorRaycaster.far=eyeHeight*4
-  ;(floorRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=false
-  groundHits.length=0;floorRaycaster.intersectObject(runtime.collider,false,groundHits)
-  let floor:THREE.Intersection|undefined
-  for(let hit=0;hit<groundHits.length;hit++)if(Math.abs(groundHits[hit].face?.normal.y||0)>.35){floor=groundHits[hit];break}
+  let floorEyeY=NaN,bestDelta=Infinity
   ;(floorRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=true
-  if(floor){
-    const floorEyeY=floor.point.y+eyeHeight
-    const isWalkableStep=floorEyeY<=stepPrevious.y+maxStep&&Math.abs(floorEyeY-stepPrevious.y)<=maxStep
-    const hasLanded=position.y<=floorEyeY&&floorEyeY<=stepPrevious.y+maxStep
-    if(isWalkableStep||hasLanded){position.y=floorEyeY;velocity.y=0}
+  for(let probe=0;probe<floorProbeOffsets.length;probe++){
+    const offset=floorProbeOffsets[probe]
+    groundOrigin.set(position.x+offset[0]*radius,stepPrevious.y+maxStep,position.z+offset[1]*radius)
+    floorRaycaster.set(groundOrigin,downDirection);floorRaycaster.near=0;floorRaycaster.far=eyeHeight*2.2
+    groundHits.length=0;floorRaycaster.intersectObject(runtime.collider,false,groundHits)
+    const floor=groundHits[0]
+    if(!floor||Math.abs(floor.face?.normal.y||0)<.35)continue
+    const candidate=floor.point.y+eyeHeight
+    const difference=Math.abs(candidate-stepPrevious.y)
+    if(candidate<=stepPrevious.y+maxStep&&candidate>=stepPrevious.y-eyeHeight*1.35&&difference<bestDelta){floorEyeY=candidate;bestDelta=difference}
   }
+  // Scan holes must never make the visitor fall. Hold the last supported eye
+  // height until one of the five probes finds real floor again.
+  position.y=Number.isFinite(floorEyeY)?floorEyeY:stepPrevious.y
+  velocity.y=0
   return position.distanceToSquared(stepPrevious)>1e-12
 }
 
