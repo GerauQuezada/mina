@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three'
 import {loadGeometry} from './loadGeometry.ts'
-import {createRuntime,firstDistance,isWalkPosition,stepWalk} from '../src/three/walkPhysics.ts'
+import {createRuntime,firstDistance,isWalkPosition,stepWalk,stepWalkFree} from '../src/three/walkPhysics.ts'
 
 test('original mine: valid interior spawn, supported movement and intact geometry',async()=>{
   const scene=await loadGeometry('public/models/mine.glb')
@@ -36,6 +36,12 @@ test('original mine: valid interior spawn, supported movement and intact geometr
     }
     assert.ok(position.distanceTo(start)<runtime.metrics.speed*10*.95,'walls and scan boundaries stop movement')
   }
+  position.copy(start)
+  for(let i=0;i<120*10;i++){
+    velocity.set(runtime.metrics.speed,0,0)
+    stepWalkFree(position,velocity,runtime,1/120)
+  }
+  assert.ok(position.x-start.x>runtime.metrics.speed*9.9,'free walkthrough crosses scanned walls and narrow obstacles')
   const after:number[]=[]
   scene.traverse(object=>{if((object as THREE.Mesh).isMesh)after.push(...(object as THREE.Mesh).geometry.attributes.position.array)})
   assert.deepEqual(after,original,'collision generation must not edit source positions')

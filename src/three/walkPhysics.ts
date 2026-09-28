@@ -157,6 +157,32 @@ export function stepWalk(position:THREE.Vector3,velocity:THREE.Vector3,runtime:M
   return position.distanceToSquared(stepPrevious)>1e-12
 }
 
+/**
+ * Live exploration mode. Horizontal geometry is intentionally non-blocking so
+ * scan noise, supports and narrow passages cannot trap the visitor. A nearby
+ * real floor is followed when available; otherwise eye height is preserved.
+ */
+export function stepWalkFree(position:THREE.Vector3,velocity:THREE.Vector3,runtime:ModelRuntime,delta:number){
+  stepPrevious.copy(position)
+  position.x+=velocity.x*delta
+  position.z+=velocity.z*delta
+
+  const {eyeHeight}=runtime.metrics
+  const floorRange=eyeHeight*.8
+  groundOrigin.set(position.x,stepPrevious.y-eyeHeight+floorRange,position.z)
+  floorRaycaster.set(groundOrigin,downDirection);floorRaycaster.near=0;floorRaycaster.far=floorRange*2
+  ;(floorRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=false
+  groundHits.length=0;floorRaycaster.intersectObject(runtime.collider,false,groundHits)
+  const floor=groundHits.find(hit=>Math.abs(hit.face?.normal.y||0)>.35)
+  ;(floorRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=true
+  if(floor){
+    const nextY=floor.point.y+eyeHeight
+    if(Math.abs(nextY-stepPrevious.y)<=floorRange)position.y=nextY
+  }
+  velocity.y=0
+  return position.distanceToSquared(stepPrevious)>1e-12
+}
+
 export function resolveCapsule(position:THREE.Vector3,velocity:THREE.Vector3,runtime:ModelRuntime){
   const {radius,eyeHeight}=runtime.metrics
   tempStart.copy(position);tempStart.y+=radius*.15

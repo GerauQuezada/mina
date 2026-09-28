@@ -33,7 +33,7 @@ El modo **Recorrido** incluye:
 - WASD o flechas y ratón con Pointer Lock en escritorio.
 - Joystick izquierdo y arrastre derecho en móvil.
 - Movimiento relativo a la mirada, gravedad y altura humana.
-- Colisiones contra la geometría real mediante `three-mesh-bvh`.
+- Paso libre a través de soportes, texturas y zonas angostas, con seguimiento asistido del suelo real.
 - Detección de una posición interior transitable y coordenadas X/Y/Z de depuración.
 - Regreso al visor orbital con **Salir del recorrido**.
 
