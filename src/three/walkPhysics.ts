@@ -24,6 +24,13 @@ const groundOrigin=new THREE.Vector3()
 const groundHits:THREE.Intersection[]=[]
 const floorRaycaster=new THREE.Raycaster()
 ;(floorRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=true
+const wallRaycaster=new THREE.Raycaster()
+const wallHits:THREE.Intersection[]=[]
+const wallOrigin=new THREE.Vector3()
+const wallDirection=new THREE.Vector3()
+const wallSide=new THREE.Vector3()
+const wallHeightFactors=[-.72,-.4,-.08]
+const wallSideFactors=[-1.25,0,1.25]
 const scanRaycaster=new THREE.Raycaster()
 const scanDirections=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1)]
 
@@ -157,29 +164,63 @@ export function stepWalk(position:THREE.Vector3,velocity:THREE.Vector3,runtime:M
   return position.distanceToSquared(stepPrevious)>1e-12
 }
 
+function broadWallBetween(position:THREE.Vector3,dx:number,dz:number,runtime:ModelRuntime){
+  const distance=Math.hypot(dx,dz)
+  if(distance<1e-8)return false
+  wallDirection.set(dx/distance,0,dz/distance)
+  wallSide.set(-wallDirection.z,0,wallDirection.x)
+  const {eyeHeight,radius}=runtime.metrics
+  let rows=0,columns=0,total=0
+  for(let row=0;row<wallHeightFactors.length;row++){
+    let rowHit=false
+    for(let column=0;column<wallSideFactors.length;column++){
+      wallOrigin.copy(position).addScaledVector(wallSide,radius*wallSideFactors[column]);wallOrigin.y+=eyeHeight*wallHeightFactors[row]
+      wallRaycaster.set(wallOrigin,wallDirection);wallRaycaster.near=.002;wallRaycaster.far=distance+radius*1.8
+      ;(wallRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=false
+      wallHits.length=0;wallRaycaster.intersectObject(runtime.collider,false,wallHits)
+      let verticalHit=false
+      for(let hit=0;hit<wallHits.length;hit++)if(Math.abs(wallHits[hit].face?.normal.y||0)<.58){verticalHit=true;break}
+      if(verticalHit){rowHit=true;columns|=1<<column;total++}
+    }
+    if(rowHit)rows++
+  }
+  const columnCount=(columns&1?1:0)+(columns&2?1:0)+(columns&4?1:0)
+  return rows>=2&&columnCount>=2&&total>=3
+}
+
 /**
- * Live exploration mode. Horizontal geometry is intentionally non-blocking so
- * scan noise, supports and narrow passages cannot trap the visitor. A nearby
- * real floor is followed when available; otherwise eye height is preserved.
+ * Selective exploration collision: broad continuous walls remain solid, while
+ * thin supports, scan noise and narrow details are non-blocking. Gravity and a
+ * real downward floor probe keep the camera grounded instead of floating.
  */
-export function stepWalkFree(position:THREE.Vector3,velocity:THREE.Vector3,runtime:ModelRuntime,delta:number){
+export function stepWalkExplore(position:THREE.Vector3,velocity:THREE.Vector3,runtime:ModelRuntime,delta:number){
   stepPrevious.copy(position)
-  position.x+=velocity.x*delta
-  position.z+=velocity.z*delta
+  const dx=velocity.x*delta,dz=velocity.z*delta
+  if(!broadWallBetween(stepPrevious,dx,dz,runtime)){
+    position.x+=dx;position.z+=dz
+  }else{
+    if(!broadWallBetween(stepPrevious,dx,0,runtime))position.x+=dx
+    if(!broadWallBetween(stepPrevious,0,dz,runtime))position.z+=dz
+    velocity.x*=.35;velocity.z*=.35
+  }
 
   const {eyeHeight}=runtime.metrics
-  const floorRange=eyeHeight*.8
-  groundOrigin.set(position.x,stepPrevious.y-eyeHeight+floorRange,position.z)
-  floorRaycaster.set(groundOrigin,downDirection);floorRaycaster.near=0;floorRaycaster.far=floorRange*2
+  const maxStep=eyeHeight*.55
+  velocity.y-=runtime.metrics.gravity*delta
+  position.y+=velocity.y*delta
+  groundOrigin.set(position.x,stepPrevious.y+maxStep,position.z)
+  floorRaycaster.set(groundOrigin,downDirection);floorRaycaster.near=0;floorRaycaster.far=eyeHeight*4
   ;(floorRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=false
   groundHits.length=0;floorRaycaster.intersectObject(runtime.collider,false,groundHits)
-  const floor=groundHits.find(hit=>Math.abs(hit.face?.normal.y||0)>.35)
+  let floor:THREE.Intersection|undefined
+  for(let hit=0;hit<groundHits.length;hit++)if(Math.abs(groundHits[hit].face?.normal.y||0)>.35){floor=groundHits[hit];break}
   ;(floorRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=true
   if(floor){
-    const nextY=floor.point.y+eyeHeight
-    if(Math.abs(nextY-stepPrevious.y)<=floorRange)position.y=nextY
+    const floorEyeY=floor.point.y+eyeHeight
+    const isWalkableStep=floorEyeY<=stepPrevious.y+maxStep&&Math.abs(floorEyeY-stepPrevious.y)<=maxStep
+    const hasLanded=position.y<=floorEyeY&&floorEyeY<=stepPrevious.y+maxStep
+    if(isWalkableStep||hasLanded){position.y=floorEyeY;velocity.y=0}
   }
-  velocity.y=0
   return position.distanceToSquared(stepPrevious)>1e-12
 }
 

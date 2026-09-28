@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three'
 import {loadGeometry} from './loadGeometry.ts'
-import {createRuntime,firstDistance,isWalkPosition,stepWalk,stepWalkFree} from '../src/three/walkPhysics.ts'
+import {createRuntime,firstDistance,isWalkPosition,stepWalk,stepWalkExplore} from '../src/three/walkPhysics.ts'
 
 test('original mine: valid interior spawn, supported movement and intact geometry',async()=>{
   const scene=await loadGeometry('public/models/mine.glb')
@@ -39,10 +39,34 @@ test('original mine: valid interior spawn, supported movement and intact geometr
   position.copy(start)
   for(let i=0;i<120*10;i++){
     velocity.set(runtime.metrics.speed,0,0)
-    stepWalkFree(position,velocity,runtime,1/120)
+    stepWalkExplore(position,velocity,runtime,1/120)
   }
-  assert.ok(position.x-start.x>runtime.metrics.speed*9.9,'free walkthrough crosses scanned walls and narrow obstacles')
+  assert.ok(position.x-start.x<runtime.metrics.speed*9.9,'selective walkthrough keeps broad mine walls solid')
   const after:number[]=[]
   scene.traverse(object=>{if((object as THREE.Mesh).isMesh)after.push(...(object as THREE.Mesh).geometry.attributes.position.array)})
   assert.deepEqual(after,original,'collision generation must not edit source positions')
+})
+
+test('selective walkthrough crosses a thin obstacle but stops at a broad wall',()=>{
+  const makeRuntime=(width:number)=>{
+    const scene=new THREE.Group()
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
+    floor.rotation.x=-Math.PI/2
+    const blocker=new THREE.Mesh(new THREE.BoxGeometry(width,3,.08),new THREE.MeshBasicMaterial())
+    blocker.position.set(0,1.5,0)
+    scene.add(floor,blocker)
+    return createRuntime(scene)
+  }
+  const cross=(runtime:ReturnType<typeof createRuntime>)=>{
+    const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
+    const velocity=new THREE.Vector3(0,0,runtime.metrics.speed)
+    for(let tick=0;tick<120*4;tick++)stepWalkExplore(position,velocity,runtime,1/120)
+    return position
+  }
+  const pastPost=cross(makeRuntime(.05))
+  assert.ok(pastPost.z>.5,'thin supports and scan obstacles must not trap the visitor')
+  const wallRuntime=makeRuntime(10)
+  const beforeWall=cross(wallRuntime)
+  assert.ok(beforeWall.z<0,'a continuous mine wall must remain solid')
+  assert.ok(Math.abs(beforeWall.y-wallRuntime.metrics.eyeHeight)<.01,'the visitor remains on the floor')
 })

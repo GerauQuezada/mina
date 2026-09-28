@@ -5,7 +5,7 @@ import { Box, Expand, Focus, Footprints, LocateFixed, MousePointer2, Undo2, X, Z
 import * as THREE from 'three'
 import { WALK_KEYS, WALK_START_POSITION, WALK_START_TARGET } from '../three/walkConfig'
 
-import { createRuntime, firstDistance, isWalkPosition, snapStartToFloor, stepWalkFree, walkTarget, type ModelRuntime } from '../three/walkPhysics'
+import { createRuntime, firstDistance, isWalkPosition, snapStartToFloor, stepWalkExplore, walkTarget, type ModelRuntime } from '../three/walkPhysics'
 
 type Mode='exterior'|'walk'
 type MoveState={x:number;z:number;lookX:number;lookY:number}
@@ -65,7 +65,7 @@ function WalkController({active,runtime,move,onPosition,onLock,startOverride,res
     velocity.current.x+=tempInput.x*runtime.metrics.speed*(1-damping);velocity.current.z+=tempInput.z*runtime.metrics.speed*(1-damping)
     const steps=Math.max(1,Math.ceil(delta/(1/120)),Math.ceil(velocity.current.length()*delta/(runtime.metrics.radius*.45)));const step=delta/steps
     for(let index=0;index<steps;index++){
-      stepWalkFree(camera.position,velocity.current,runtime,step)
+      stepWalkExplore(camera.position,velocity.current,runtime,step)
     }
     const margin=runtime.metrics.eyeHeight*2
     if(camera.position.x<runtime.bounds.min.x-margin||camera.position.x>runtime.bounds.max.x+margin||camera.position.y<runtime.bounds.min.y-margin||camera.position.y>runtime.bounds.max.y+margin||camera.position.z<runtime.bounds.min.z-margin||camera.position.z>runtime.bounds.max.z+margin){camera.position.copy(startPosition.current);velocity.current.set(0,0,0)}
@@ -112,9 +112,9 @@ export default function Model3D(){
       <Loading/>
       {mode==='exterior'&&hint&&<div className="selection-hint glass">{hint}</div>}
       <div className="viewer-actions"><button onClick={()=>controls.current?.dollyIn(1.3)} title="Acercar" disabled={mode==='walk'}><ZoomIn/></button><button onClick={()=>controls.current?.dollyOut(1.3)} title="Alejar" disabled={mode==='walk'}><ZoomOut/></button><button onClick={reset} title="Restablecer"><Undo2/></button><button onClick={fullscreen} title="Pantalla completa"><Expand/></button></div>
-      {mode==='walk'&&<><div className="walk-debug glass"><LocateFixed/><span>X {position.x.toFixed(2)} · Y {position.y.toFixed(2)} · Z {position.z.toFixed(2)}</span><small>Altura {runtime?.metrics.eyeHeight.toFixed(2)} u · Paso libre activo · Suelo asistido · {startOverride?'Entrada elegida':'Inicio interior validado'}</small></div><div className="walk-crosshair"/><div className="walk-help glass"><MousePointer2/><span>{touchDevice?'Joystick para caminar · Arrastra a la derecha para mirar':pointerLocked?'WASD/Flechas para caminar · Ratón para mirar · ESC libera el ratón':'Haz clic dentro del visor para controlar la mirada'}</span></div><button className="exit-walk glass" onClick={exitWalk}><X/> Salir del recorrido</button>{touchDevice&&<MobileWalkControls move={move}/>}</>}
+      {mode==='walk'&&<><div className="walk-debug glass"><LocateFixed/><span>X {position.x.toFixed(2)} · Y {position.y.toFixed(2)} · Z {position.z.toFixed(2)}</span><small>Altura {runtime?.metrics.eyeHeight.toFixed(2)} u · Paredes protegidas · Suelo activo · {startOverride?'Entrada elegida':'Inicio interior validado'}</small></div><div className="walk-crosshair"/><div className="walk-help glass"><MousePointer2/><span>{touchDevice?'Joystick para caminar · Arrastra a la derecha para mirar':pointerLocked?'WASD/Flechas para caminar · Ratón para mirar · ESC libera el ratón':'Haz clic dentro del visor para controlar la mirada'}</span></div><button className="exit-walk glass" onClick={exitWalk}><X/> Salir del recorrido</button>{touchDevice&&<MobileWalkControls move={move}/>}</>}
     </div>
-    <div className="model-note"><b>{mode==='walk'?'Recorrido interno en primera persona':'Modelo original sin modificaciones'}</b><p>{mode==='walk'?'Paso libre activado: puedes atravesar soportes, texturas y zonas angostas; la cámara conserva la altura y sigue el suelo cuando está disponible.':'Pulsa Recorrido para entrar por una abertura transitable detectada en el modelo con libertad total de movimiento.'}</p><button onClick={reloadModel}>Reintentar carga</button></div>
+    <div className="model-note"><b>{mode==='walk'?'Recorrido interno en primera persona':'Modelo original sin modificaciones'}</b><p>{mode==='walk'?'Las paredes amplias permanecen sólidas. Los soportes delgados, el ruido del escaneo y las zonas angostas no bloquean; la gravedad mantiene la cámara sobre el suelo.':'Pulsa Recorrido para entrar por una abertura transitable detectada en el modelo con movilidad completa.'}</p><button onClick={reloadModel}>Reintentar carga</button></div>
   </div>
 }
 
