@@ -76,8 +76,11 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.equal(ownLabor.ownership_type,'own');assert.equal(ownLabor.mine_percent,100);assert.equal(ownLabor.partner_percent,0);assert.equal(ownLabor.partner_name,'Omar Miranda')
       await post('/production',{laborId:1,date:'2026-09-27',sacks:20})
       await post('/production',{laborId:own.id,date:'2026-09-27',sacks:30})
+      await post('/expenses',{laborId:1,name:'Gasto histórico',amount:100,expenseDate:'2026-08-30',expenseTime:'10:00',category:'Otros',paymentMethod:'Efectivo'})
       const dashboard:any=await api('/dashboard')
       assert.deepEqual(dashboard.ownerProduction,{partnerShareAll:10,ownAll:30,totalAll:40,partnerShareMonth:10,ownMonth:30,totalMonth:40})
+      assert.equal(dashboard.cards.totalSacks,50)
+      assert.equal(dashboard.cards.totalExpensesCents,10000)
     })
     await t.test('backup preserves pictures and legacy history but drops credentials', async () => {
       const backup:any=await api('/backup')
