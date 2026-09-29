@@ -78,14 +78,14 @@ test('look-guided movement follows an upper and lower floor level',()=>{
   const scene=new THREE.Group()
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
   floor.rotation.x=-Math.PI/2
-  const upper=new THREE.Mesh(new THREE.BoxGeometry(10,.35,5),new THREE.MeshBasicMaterial())
-  upper.position.set(0,.175,2.5)
+  const upper=new THREE.Mesh(new THREE.BoxGeometry(10,.2,5),new THREE.MeshBasicMaterial())
+  upper.position.set(0,.1,2.5)
   scene.add(floor,upper)
   const runtime=createRuntime(scene)
   const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
   const velocity=new THREE.Vector3()
   for(let tick=0;tick<120*2;tick++){velocity.set(0,runtime.metrics.speed,runtime.metrics.speed);stepWalkExplore(position,velocity,runtime,1/120)}
-  assert.ok(position.y>runtime.metrics.eyeHeight+.25,'looking upward while advancing reaches the upper level')
+  assert.ok(position.y>runtime.metrics.eyeHeight+.15,'looking upward while advancing reaches the upper level')
   for(let tick=0;tick<120*2;tick++){velocity.set(0,-runtime.metrics.speed,-runtime.metrics.speed);stepWalkExplore(position,velocity,runtime,1/120)}
   assert.ok(Math.abs(position.y-runtime.metrics.eyeHeight)<.02,'looking downward while advancing returns to the lower level')
 })
@@ -95,7 +95,7 @@ test('a low ceiling is never selected as floor and cannot be crossed',()=>{
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
   floor.rotation.x=-Math.PI/2
   const lowRoof=new THREE.Mesh(new THREE.BoxGeometry(10,.1,5),new THREE.MeshBasicMaterial())
-  lowRoof.position.set(0,.52,2.5)
+  lowRoof.position.set(0,.34,2.5)
   scene.add(floor,lowRoof)
   const runtime=createRuntime(scene)
   const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
@@ -103,6 +103,21 @@ test('a low ceiling is never selected as floor and cannot be crossed',()=>{
   for(let tick=0;tick<120*3;tick++)stepWalkExplore(position,velocity,runtime,1/120)
   assert.ok(position.z<.05,'a descending roof blocks forward motion before the camera crosses it')
   assert.ok(Math.abs(position.y-runtime.metrics.eyeHeight)<.02,'the underside of a low roof is never mistaken for an upper floor')
+})
+
+test('a centered narrow opening is traversable even when both edges are close',()=>{
+  const scene=new THREE.Group()
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
+  floor.rotation.x=-Math.PI/2
+  const left=new THREE.Mesh(new THREE.BoxGeometry(4.98,2,.08),new THREE.MeshBasicMaterial())
+  const right=left.clone()
+  left.position.set(-2.51,1,0);right.position.set(2.51,1,0)
+  scene.add(floor,left,right)
+  const runtime=createRuntime(scene)
+  const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
+  const velocity=new THREE.Vector3(0,0,runtime.metrics.speed)
+  for(let tick=0;tick<120*3;tick++)stepWalkExplore(position,velocity,runtime,1/120)
+  assert.ok(position.z>.5,'nearby doorway edges must not be classified as a solid wall across the center')
 })
 
 test('the visitor descends from a ledge to real lower ground',()=>{

@@ -31,7 +31,7 @@ const wallOrigin=new THREE.Vector3()
 const wallDirection=new THREE.Vector3()
 const wallSide=new THREE.Vector3()
 const wallHeightFactors=[-.72,-.4,-.08]
-const wallSideFactors=[-1.25,0,1.25]
+const wallSideFactors=[-.35,0,.35]
 const floorProbeOffsets=[[0,0],[-.38,0],[.38,0],[0,-.38],[0,.38]] as const
 const headProbeOffsets=[[0,0],[-.55,0],[.55,0],[0,-.55],[0,.55]] as const
 const scanRaycaster=new THREE.Raycaster()
@@ -88,9 +88,11 @@ export function createRuntime(scene:THREE.Object3D):ModelRuntime{
   collider.raycast=acceleratedRaycast
   collider.updateMatrixWorld(true)
   const base=Math.min(size.x,size.z)
-  const eyeHeight=base*.047
-  const radius=eyeHeight*.09
-  const metrics={eyeHeight,radius,speed:eyeHeight*1.45,gravity:eyeHeight*9,near:Math.max(.002,eyeHeight*.008),far:Math.max(120,sphere.radius*12)}
+  // The scan contains very narrow stopes and imperfect openings. Use a compact
+  // exploration profile while keeping walking speed tied to the model scale.
+  const eyeHeight=base*.028
+  const radius=base*.0018
+  const metrics={eyeHeight,radius,speed:base*.068,gravity:base*.423,near:Math.max(.002,eyeHeight*.008),far:Math.max(120,sphere.radius*12)}
   const triangles=geometry.index?geometry.index.count/3:(geometry.attributes.position?.count||0)/3
   const detected=detectWalkStart(collider,bounds,size,center,metrics)
   const runtime={collider,bounds,sphere,size,center,metrics,triangles,detectedStart:detected.start,detectedTarget:detected.target,startScore:detected.score}
@@ -173,22 +175,24 @@ function broadWallBetween(position:THREE.Vector3,dx:number,dz:number,runtime:Mod
   wallDirection.set(dx/distance,0,dz/distance)
   wallSide.set(-wallDirection.z,0,wallDirection.x)
   const {eyeHeight,radius}=runtime.metrics
-  let rows=0,rowMask=0,columns=0,total=0
+  let rows=0,rowMask=0,columns=0,total=0,centerRows=0
   for(let row=0;row<wallHeightFactors.length;row++){
     let rowHit=false
     for(let column=0;column<wallSideFactors.length;column++){
-      wallOrigin.copy(position).addScaledVector(wallSide,radius*wallSideFactors[column]);wallOrigin.y+=eyeHeight*wallHeightFactors[row]
+      wallOrigin.copy(position).addScaledVector(wallSide,eyeHeight*wallSideFactors[column]);wallOrigin.y+=eyeHeight*wallHeightFactors[row]
       wallRaycaster.set(wallOrigin,wallDirection);wallRaycaster.near=.002;wallRaycaster.far=distance+radius*1.8
       ;(wallRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=false
       wallHits.length=0;wallRaycaster.intersectObject(runtime.collider,false,wallHits)
       let verticalHit=false
       for(let hit=0;hit<wallHits.length;hit++)if(Math.abs(wallHits[hit].face?.normal.y||0)<.58){verticalHit=true;break}
-      if(verticalHit){rowHit=true;columns|=1<<column;total++}
+      if(verticalHit){rowHit=true;columns|=1<<column;total++;if(column===1)centerRows++}
     }
     if(rowHit){rows++;rowMask|=1<<row}
   }
   const columnCount=(columns&1?1:0)+(columns&2?1:0)+(columns&4?1:0)
-  return rows>=2&&(rowMask&4)!==0&&columnCount>=2&&total>=3
+  // Edges on both sides are a doorway, not a solid wall. A genuine blocking
+  // wall must also cover the center line at more than one body height.
+  return centerRows>=2&&rows>=2&&(rowMask&4)!==0&&columnCount>=2&&total>=3
 }
 
 /**
@@ -238,12 +242,13 @@ export function stepWalkExplore(position:THREE.Vector3,velocity:THREE.Vector3,ru
   // Do not let horizontal motion carry the eye through a descending roof.
   // Multiple short upward probes ignore isolated scan noise but catch a
   // continuous ceiling that leaves no room for the visitor's head.
-  let blockedHeadProbes=0
-  for(const offset of headProbeOffsets){
+  let blockedHeadProbes=0,centerHeadBlocked=false
+  for(let probe=0;probe<headProbeOffsets.length;probe++){
+    const offset=headProbeOffsets[probe]
     groundOrigin.set(position.x+offset[0]*radius,position.y-radius*.8,position.z+offset[1]*radius)
-    if(firstDistance(runtime.collider,groundOrigin,upDirection,radius*1.45)<radius*1.25)blockedHeadProbes++
+    if(firstDistance(runtime.collider,groundOrigin,upDirection,radius*1.9)<radius*1.65){blockedHeadProbes++;if(probe===0)centerHeadBlocked=true}
   }
-  if(blockedHeadProbes>=3){position.x=stepPrevious.x;position.z=stepPrevious.z;position.y=stepPrevious.y;velocity.x*=.2;velocity.z*=.2}
+  if(centerHeadBlocked&&blockedHeadProbes>=3){position.x=stepPrevious.x;position.z=stepPrevious.z;position.y=stepPrevious.y;velocity.x*=.2;velocity.z*=.2}
   velocity.y=0
   return position.distanceToSquared(stepPrevious)>1e-12
 }
