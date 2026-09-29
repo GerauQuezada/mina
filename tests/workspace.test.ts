@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { api } from '../src/lib/api.ts'
-import { OWNER_EMAIL, logout } from '../src/lib/cloud.ts'
+import { OWNER_EMAIL, WORKSPACE_UPDATED_EVENT, logout } from '../src/lib/cloud.ts'
 import { validateBackup, validDate, validMedia } from '../src/lib/validation.ts'
 import { reportCsv, reportKeys } from '../src/lib/reports.ts'
 
@@ -9,7 +9,11 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
   let payload: any = null, revision = 0, saves = 0
   const originalFetch = globalThis.fetch
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window')
+  const browserEvents=new EventTarget();let updateEvents=0
+  browserEvents.addEventListener(WORKSPACE_UPDATED_EVENT,()=>updateEvents++)
   Object.defineProperty(globalThis, 'document', {configurable:true,value:{baseURI:'https://example.test/mina/'}})
+  Object.defineProperty(globalThis, 'window', {configurable:true,value:browserEvents})
   globalThis.fetch = async (input, options = {}) => {
     const url = String(input)
     const json = (value: unknown, status=200) => new Response(JSON.stringify(value), {status,headers:{'Content-Type':'application/json'}})
@@ -95,11 +99,14 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.equal(result.filter(x=>x.status==='rejected').length,1)
     })
     await logout()
+    assert.equal(updateEvents,saves,'every successful write notifies the live dashboard')
     await assert.rejects(api('/debts'),/Inicia sesión/)
   } finally {
     globalThis.fetch=originalFetch
     if(originalDocument)Object.defineProperty(globalThis,'document',originalDocument)
     else Reflect.deleteProperty(globalThis,'document')
+    if(originalWindow)Object.defineProperty(globalThis,'window',originalWindow)
+    else Reflect.deleteProperty(globalThis,'window')
   }
 })
 

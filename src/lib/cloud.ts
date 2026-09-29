@@ -1,4 +1,5 @@
 export const OWNER_EMAIL = 'madfaygoo@gmail.com'
+export const WORKSPACE_UPDATED_EVENT = 'mine:workspace-updated'
 type Config = { url: string; key: string }
 type Session = { access_token: string; refresh_token: string; expires_at: number; user: { id: string; email: string } }
 let session: Session | null = null
@@ -69,5 +70,7 @@ export async function loadCloud() {
   return rows[0] || { payload: null, revision: 0 }
 }
 export async function saveCloud(payload: unknown, revision: number) {
-  return request('/rest/v1/rpc/save_mine_workspace', { method: 'POST', body: JSON.stringify({ data: payload, expected_revision: revision }) }, await token())
+  const result=await request('/rest/v1/rpc/save_mine_workspace', { method: 'POST', body: JSON.stringify({ data: payload, expected_revision: revision }) }, await token())
+  if(typeof window!=='undefined')window.dispatchEvent(new Event(WORKSPACE_UPDATED_EVENT))
+  return result
 }

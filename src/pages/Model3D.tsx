@@ -10,6 +10,7 @@ import { createRuntime, firstDistance, isWalkPosition, snapStartToFloor, stepWal
 type Mode='exterior'|'walk'
 type MoveState={x:number;z:number;lookX:number;lookY:number}
 const tempForward=new THREE.Vector3()
+const tempPlanarForward=new THREE.Vector3()
 const tempRight=new THREE.Vector3()
 const tempInput=new THREE.Vector3()
 const tempEuler=new THREE.Euler(0,0,0,'YXZ')
@@ -57,14 +58,16 @@ function WalkController({active,runtime,move,onPosition,onLock,startOverride,res
     const delta=Math.min(frameDelta,.1)
     tempEuler.setFromQuaternion(camera.quaternion,'YXZ')
     tempEuler.y-=move.current.lookX*.0022;tempEuler.x=THREE.MathUtils.clamp(tempEuler.x-move.current.lookY*.0022,-Math.PI*.47,Math.PI*.47);tempEuler.z=0;camera.quaternion.setFromEuler(tempEuler);move.current.lookX=0;move.current.lookY=0
-    camera.getWorldDirection(tempForward);tempForward.y=0;if(tempForward.lengthSq()<1e-8)tempForward.set(0,0,-1);tempForward.normalize();tempRight.crossVectors(tempForward,camera.up).normalize()
+    camera.getWorldDirection(tempForward);tempForward.normalize();tempPlanarForward.set(tempForward.x,0,tempForward.z);if(tempPlanarForward.lengthSq()<1e-8)tempPlanarForward.set(0,0,-1);tempPlanarForward.normalize();tempRight.crossVectors(tempPlanarForward,camera.up).normalize()
     const forward=(keys.current.KeyW||keys.current.ArrowUp?1:0)-(keys.current.KeyS||keys.current.ArrowDown?1:0)+move.current.z
     const side=(keys.current.KeyD||keys.current.ArrowRight?1:0)-(keys.current.KeyA||keys.current.ArrowLeft?1:0)+move.current.x
     tempInput.set(0,0,0).addScaledVector(tempForward,forward).addScaledVector(tempRight,side);if(tempInput.lengthSq()>1)tempInput.normalize()
     const damping=Math.exp(-10*delta);velocity.current.x*=damping;velocity.current.z*=damping
     velocity.current.x+=tempInput.x*runtime.metrics.speed*(1-damping);velocity.current.z+=tempInput.z*runtime.metrics.speed*(1-damping)
+    const verticalSpeed=tempInput.y*runtime.metrics.speed
     const steps=Math.max(1,Math.ceil(delta/(1/120)),Math.ceil(velocity.current.length()*delta/(runtime.metrics.radius*.45)));const step=delta/steps
     for(let index=0;index<steps;index++){
+      velocity.current.y=verticalSpeed
       stepWalkExplore(camera.position,velocity.current,runtime,step)
     }
     const margin=runtime.metrics.eyeHeight*2
@@ -112,7 +115,7 @@ export default function Model3D(){
       <Loading/>
       {mode==='exterior'&&hint&&<div className="selection-hint glass">{hint}</div>}
       <div className="viewer-actions"><button onClick={()=>controls.current?.dollyIn(1.3)} title="Acercar" disabled={mode==='walk'}><ZoomIn/></button><button onClick={()=>controls.current?.dollyOut(1.3)} title="Alejar" disabled={mode==='walk'}><ZoomOut/></button><button onClick={reset} title="Restablecer"><Undo2/></button><button onClick={fullscreen} title="Pantalla completa"><Expand/></button></div>
-      {mode==='walk'&&<><div className="walk-debug glass"><LocateFixed/><span>X {position.x.toFixed(2)} · Y {position.y.toFixed(2)} · Z {position.z.toFixed(2)}</span><small>Altura {runtime?.metrics.eyeHeight.toFixed(2)} u · Paredes protegidas · Suelo activo · {startOverride?'Entrada elegida':'Inicio interior validado'}</small></div><div className="walk-crosshair"/><div className="walk-help glass"><MousePointer2/><span>{touchDevice?'Joystick para caminar · Arrastra a la derecha para mirar':pointerLocked?'WASD/Flechas para caminar · Ratón para mirar · ESC libera el ratón':'Haz clic dentro del visor para controlar la mirada'}</span></div><button className="exit-walk glass" onClick={exitWalk}><X/> Salir del recorrido</button>{touchDevice&&<MobileWalkControls move={move}/>}</>}
+      {mode==='walk'&&<><div className="walk-debug glass"><LocateFixed/><span>X {position.x.toFixed(2)} · Y {position.y.toFixed(2)} · Z {position.z.toFixed(2)}</span><small>Altura {runtime?.metrics.eyeHeight.toFixed(2)} u · Perfil angosto · Suelo activo · {startOverride?'Entrada elegida':'Inicio interior validado'}</small></div><div className="walk-crosshair"/><div className="walk-help glass"><MousePointer2/><span>{touchDevice?'Joystick para caminar · Mira arriba o abajo para cambiar de nivel':pointerLocked?'WASD/Flechas · La inclinación de la mirada guía subidas y bajadas · ESC libera el ratón':'Haz clic dentro del visor para controlar la mirada'}</span></div><button className="exit-walk glass" onClick={exitWalk}><X/> Salir del recorrido</button>{touchDevice&&<MobileWalkControls move={move}/>}</>}
     </div>
     <div className="model-note"><b>{mode==='walk'?'Recorrido interno en primera persona':'Modelo original sin modificaciones'}</b><p>{mode==='walk'?'Las paredes amplias permanecen sólidas. Cinco puntos detectan el suelo y conservan una altura segura sobre huecos del escaneo, sin caídas ni reinicios.':'Pulsa Recorrido para entrar por una abertura transitable detectada en el modelo con movilidad completa.'}</p><button onClick={reloadModel}>Reintentar carga</button></div>
   </div>

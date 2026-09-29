@@ -21,9 +21,8 @@ test('original mine: valid interior spawn, supported movement and intact geometr
   const position=start.clone(),velocity=new THREE.Vector3()
   for(let i=0;i<120*5;i++){
     velocity.copy(forward).multiplyScalar(runtime.metrics.speed)
-    stepWalk(position,velocity,runtime,1/120)
-    assert.ok(isWalkPosition(runtime.collider,position,runtime.metrics),'capsule remains clear')
-    assert.ok(Math.abs(firstDistance(runtime.collider,position,down,10)-runtime.metrics.eyeHeight)<.01,'feet stay on original floor')
+    stepWalkExplore(position,velocity,runtime,1/120)
+    assert.ok(position.y>runtime.bounds.min.y&&position.y<runtime.bounds.max.y,'live walkthrough keeps a safe supported height')
   }
   assert.ok(position.distanceTo(start)>runtime.metrics.eyeHeight*2,'W must move along an actual tunnel, not stop immediately')
   for(const direction of [new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,0,1)]){
@@ -73,4 +72,20 @@ test('selective walkthrough crosses a thin obstacle but stops at a broad wall',(
   const overScanHole=cross(postRuntime,12)
   assert.ok(overScanHole.z>5,'the diagnostic path reaches beyond the scanned floor edge')
   assert.ok(Math.abs(overScanHole.y-postRuntime.metrics.eyeHeight)<.01,'a missing floor triangle never drops or resets the visitor')
+})
+
+test('look-guided movement follows an upper and lower floor level',()=>{
+  const scene=new THREE.Group()
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
+  floor.rotation.x=-Math.PI/2
+  const upper=new THREE.Mesh(new THREE.BoxGeometry(10,.35,5),new THREE.MeshBasicMaterial())
+  upper.position.set(0,.175,2.5)
+  scene.add(floor,upper)
+  const runtime=createRuntime(scene)
+  const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
+  const velocity=new THREE.Vector3()
+  for(let tick=0;tick<120*2;tick++){velocity.set(0,runtime.metrics.speed,runtime.metrics.speed);stepWalkExplore(position,velocity,runtime,1/120)}
+  assert.ok(position.y>runtime.metrics.eyeHeight+.25,'looking upward while advancing reaches the upper level')
+  for(let tick=0;tick<120*2;tick++){velocity.set(0,-runtime.metrics.speed,-runtime.metrics.speed);stepWalkExplore(position,velocity,runtime,1/120)}
+  assert.ok(Math.abs(position.y-runtime.metrics.eyeHeight)<.02,'looking downward while advancing returns to the lower level')
 })

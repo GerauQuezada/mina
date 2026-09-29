@@ -18,6 +18,7 @@ No se usa Render, tarjeta de crédito ni un servidor de pago. Los planes gratuit
 - Labores con socio y porcentaje configurable.
 - Labores propias cuya producción pertenece al propietario al 100%.
 - Dashboard con tres totales separados: participación en labores con socios, labores propias y total del propietario.
+- Dashboard reactivo: se recalcula al guardar cualquier registro, al volver a la pantalla, al recuperar el foco y periódicamente para sincronizar otros dispositivos.
 - Fotografías para socios, préstamos con comprobantes y seguimiento de abonos.
 - Ventas con fecha, hora, peso, ley, ingreso y ganancia neta cuando se conocen los costos.
 - Precio actual del oro con estado de actualización y manejo de fallos de red.
@@ -32,7 +33,8 @@ El modo **Recorrido** incluye:
 
 - WASD o flechas y ratón con Pointer Lock en escritorio.
 - Joystick izquierdo y arrastre derecho en móvil.
-- Movimiento relativo a la mirada, gravedad y altura humana.
+- Movimiento relativo a la mirada, incluyendo subida y bajada guiada por su inclinación.
+- Perfil reducido para entrar en galerías y espacios angostos.
 - Colisión selectiva: las paredes amplias son sólidas, mientras soportes delgados, ruido del escaneo y zonas angostas no bloquean. Cinco sondas siguen el suelo real y conservan la altura ante huecos del escaneo.
 - Detección de una posición interior transitable y coordenadas X/Y/Z de depuración.
 - Regreso al visor orbital con **Salir del recorrido**.

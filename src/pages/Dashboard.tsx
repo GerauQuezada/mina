@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { PackageOpen, Pickaxe, ReceiptText, TrendingUp, WalletCards, ArrowUpRight, Activity, Handshake, Crown, Layers3 } from 'lucide-react'
 import { api, number, soles } from '../lib/api'
+import { WORKSPACE_UPDATED_EVENT } from '../lib/cloud'
 
 import GoldPrice from '../components/GoldPrice'
 import { Link } from 'react-router-dom'
 
 type Data={ownerProduction?:{partnerShareAll:number;ownAll:number;totalAll:number;partnerShareMonth:number;ownMonth:number;totalMonth:number};cards:any;daily:any[];byLabor:any[];expensesByLabor:any[];categories:any[];activity:any[]}
-export default function Dashboard(){const [data,setData]=useState<Data|null>(null);const [error,setError]=useState('');useEffect(()=>{api<Data>('/dashboard').then(setData).catch(e=>setError(e.message))},[])
+export default function Dashboard(){const [data,setData]=useState<Data|null>(null);const [error,setError]=useState('');useEffect(()=>{let mounted=true;const load=()=>api<Data>('/dashboard').then(value=>{if(mounted){setData(value);setError('')}}).catch(e=>{if(mounted)setError(e.message)});const visible=()=>{if(document.visibilityState==='visible')void load()};void load();window.addEventListener(WORKSPACE_UPDATED_EVENT,load);window.addEventListener('focus',load);document.addEventListener('visibilitychange',visible);const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void load()},15000);return()=>{mounted=false;window.removeEventListener(WORKSPACE_UPDATED_EVENT,load);window.removeEventListener('focus',load);document.removeEventListener('visibilitychange',visible);window.clearInterval(timer)}},[])
 if(error)return <div className="alert error">{error}</div>;if(!data)return <div className="skeleton-grid">{[1,2,3,4,5,6].map(i=><div className="skeleton" key={i}/>)}</div>
 const cards=[['Sacos hoy',number(data.cards.todaySacks),PackageOpen,'amber'],['Producción del mes',`${number(data.cards.monthSacks)} sacos`,TrendingUp,'green'],['Labores activas',number(data.cards.activeLabors),Pickaxe,'blue'],['Gastos del mes',soles(data.cards.monthExpensesCents),ReceiptText,'red'],['Deudas pendientes · PEN',soles(data.cards.pendingCents),WalletCards,'violet'],['Ingresos del mes · PEN',soles(data.cards.monthSalesCents),ArrowUpRight,'cyan']] as const
 const owner=data.ownerProduction||{partnerShareAll:0,ownAll:0,totalAll:0,partnerShareMonth:0,ownMonth:0,totalMonth:0}

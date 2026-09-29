@@ -86,9 +86,9 @@ export function createRuntime(scene:THREE.Object3D):ModelRuntime{
   collider.raycast=acceleratedRaycast
   collider.updateMatrixWorld(true)
   const base=Math.min(size.x,size.z)
-  const eyeHeight=base*.062
-  const radius=eyeHeight*.16
-  const metrics={eyeHeight,radius,speed:eyeHeight*1.25,gravity:eyeHeight*9,near:Math.max(.002,eyeHeight*.008),far:Math.max(120,sphere.radius*12)}
+  const eyeHeight=base*.047
+  const radius=eyeHeight*.09
+  const metrics={eyeHeight,radius,speed:eyeHeight*1.45,gravity:eyeHeight*9,near:Math.max(.002,eyeHeight*.008),far:Math.max(120,sphere.radius*12)}
   const triangles=geometry.index?geometry.index.count/3:(geometry.attributes.position?.count||0)/3
   const detected=detectWalkStart(collider,bounds,size,center,metrics)
   const runtime={collider,bounds,sphere,size,center,metrics,triangles,detectedStart:detected.start,detectedTarget:detected.target,startScore:detected.score}
@@ -171,7 +171,7 @@ function broadWallBetween(position:THREE.Vector3,dx:number,dz:number,runtime:Mod
   wallDirection.set(dx/distance,0,dz/distance)
   wallSide.set(-wallDirection.z,0,wallDirection.x)
   const {eyeHeight,radius}=runtime.metrics
-  let rows=0,columns=0,total=0
+  let rows=0,rowMask=0,columns=0,total=0
   for(let row=0;row<wallHeightFactors.length;row++){
     let rowHit=false
     for(let column=0;column<wallSideFactors.length;column++){
@@ -183,16 +183,16 @@ function broadWallBetween(position:THREE.Vector3,dx:number,dz:number,runtime:Mod
       for(let hit=0;hit<wallHits.length;hit++)if(Math.abs(wallHits[hit].face?.normal.y||0)<.58){verticalHit=true;break}
       if(verticalHit){rowHit=true;columns|=1<<column;total++}
     }
-    if(rowHit)rows++
+    if(rowHit){rows++;rowMask|=1<<row}
   }
   const columnCount=(columns&1?1:0)+(columns&2?1:0)+(columns&4?1:0)
-  return rows>=2&&columnCount>=2&&total>=3
+  return rows>=2&&(rowMask&4)!==0&&columnCount>=2&&total>=3
 }
 
 /**
  * Selective exploration collision: broad continuous walls remain solid, while
- * thin supports, scan noise and narrow details are non-blocking. Gravity and a
- * real downward floor probe keep the camera grounded instead of floating.
+ * thin supports, scan noise and narrow details are non-blocking. Multiple
+ * downward probes keep the camera grounded and bridge holes in the scan.
  */
 export function stepWalkExplore(position:THREE.Vector3,velocity:THREE.Vector3,runtime:ModelRuntime,delta:number){
   stepPrevious.copy(position)
@@ -206,18 +206,19 @@ export function stepWalkExplore(position:THREE.Vector3,velocity:THREE.Vector3,ru
   }
 
   const {eyeHeight,radius}=runtime.metrics
-  const maxStep=eyeHeight*.55
+  const maxStep=eyeHeight*.85
+  const desiredEyeY=stepPrevious.y+velocity.y*delta
   let floorEyeY=NaN,bestDelta=Infinity
   ;(floorRaycaster as THREE.Raycaster&{firstHitOnly:boolean}).firstHitOnly=true
   for(let probe=0;probe<floorProbeOffsets.length;probe++){
     const offset=floorProbeOffsets[probe]
     groundOrigin.set(position.x+offset[0]*radius,stepPrevious.y+maxStep,position.z+offset[1]*radius)
-    floorRaycaster.set(groundOrigin,downDirection);floorRaycaster.near=0;floorRaycaster.far=eyeHeight*2.2
+    floorRaycaster.set(groundOrigin,downDirection);floorRaycaster.near=0;floorRaycaster.far=eyeHeight*3.2
     groundHits.length=0;floorRaycaster.intersectObject(runtime.collider,false,groundHits)
     const floor=groundHits[0]
     if(!floor||Math.abs(floor.face?.normal.y||0)<.35)continue
     const candidate=floor.point.y+eyeHeight
-    const difference=Math.abs(candidate-stepPrevious.y)
+    const difference=Math.abs(candidate-desiredEyeY)
     if(candidate<=stepPrevious.y+maxStep&&candidate>=stepPrevious.y-eyeHeight*1.35&&difference<bestDelta){floorEyeY=candidate;bestDelta=difference}
   }
   // Scan holes must never make the visitor fall. Hold the last supported eye
