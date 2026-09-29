@@ -74,6 +74,41 @@ test('selective walkthrough crosses a thin obstacle but stops at a broad wall',(
   assert.ok(Math.abs(overScanHole.y-postRuntime.metrics.eyeHeight)<.01,'a missing floor triangle never drops or resets the visitor')
 })
 
+test('low rubble is traversable but a full-height wall remains solid',()=>{
+  const makeRuntime=(height:number)=>{
+    const scene=new THREE.Group()
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
+    floor.rotation.x=-Math.PI/2
+    const obstacle=new THREE.Mesh(new THREE.BoxGeometry(10,height,.12),new THREE.MeshBasicMaterial())
+    obstacle.position.set(0,height/2,0)
+    scene.add(floor,obstacle)
+    return createRuntime(scene)
+  }
+  const cross=(runtime:ReturnType<typeof createRuntime>)=>{
+    const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
+    const velocity=new THREE.Vector3(0,0,runtime.metrics.speed)
+    for(let tick=0;tick<120*4;tick++)stepWalkExplore(position,velocity,runtime,1/120)
+    return position.z
+  }
+  assert.ok(cross(makeRuntime(.2))>.5,'rocks and rubble below head level do not stop exploration')
+  assert.ok(cross(makeRuntime(3))<0,'a continuous wall covering the tunnel remains solid')
+})
+
+test('holding forward automatically skirts a tall isolated rock',()=>{
+  const scene=new THREE.Group()
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
+  floor.rotation.x=-Math.PI/2
+  const rock=new THREE.Mesh(new THREE.BoxGeometry(.5,2,.3),new THREE.MeshBasicMaterial())
+  rock.position.set(0,1,0)
+  scene.add(floor,rock)
+  const runtime=createRuntime(scene)
+  const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
+  const velocity=new THREE.Vector3(0,0,runtime.metrics.speed)
+  for(let tick=0;tick<120*8;tick++)stepWalkExplore(position,velocity,runtime,1/120)
+  assert.ok(position.z>.5,'the visitor moves around an isolated obstacle and continues forward')
+  assert.ok(Math.abs(position.x)>.1,'automatic avoidance uses the open side of the obstacle')
+})
+
 test('look-guided movement follows an upper and lower floor level',()=>{
   const scene=new THREE.Group()
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))

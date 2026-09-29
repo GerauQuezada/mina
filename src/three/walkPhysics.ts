@@ -30,6 +30,7 @@ const wallHits:THREE.Intersection[]=[]
 const wallOrigin=new THREE.Vector3()
 const wallDirection=new THREE.Vector3()
 const wallSide=new THREE.Vector3()
+const obstacleSide=new THREE.Vector3()
 const wallHeightFactors=[-.72,-.4,-.08]
 const wallSideFactors=[-.35,0,.35]
 const floorProbeOffsets=[[0,0],[-.38,0],[.38,0],[0,-.38],[0,.38]] as const
@@ -206,9 +207,18 @@ export function stepWalkExplore(position:THREE.Vector3,velocity:THREE.Vector3,ru
   if(!broadWallBetween(stepPrevious,dx,dz,runtime)){
     position.x+=dx;position.z+=dz
   }else{
+    let avoided=false
     if(!broadWallBetween(stepPrevious,dx,0,runtime))position.x+=dx
     if(!broadWallBetween(stepPrevious,0,dz,runtime))position.z+=dz
-    velocity.x*=.35;velocity.z*=.35
+    // A local rock can block the center rays even though the gallery remains
+    // open beside it. Nudge sideways until the forward path clears; continuous
+    // walls only cause sliding along their face and are never crossed.
+    if(Math.hypot(position.x-stepPrevious.x,position.z-stepPrevious.z)<Math.hypot(dx,dz)*.1){
+      obstacleSide.set(-dz,0,dx).normalize().multiplyScalar(Math.hypot(dx,dz))
+      if(!broadWallBetween(stepPrevious,obstacleSide.x,obstacleSide.z,runtime)){position.x+=obstacleSide.x;position.z+=obstacleSide.z;avoided=true}
+      else if(!broadWallBetween(stepPrevious,-obstacleSide.x,-obstacleSide.z,runtime)){position.x-=obstacleSide.x;position.z-=obstacleSide.z;avoided=true}
+    }
+    if(!avoided){velocity.x*=.35;velocity.z*=.35}
   }
 
   const {eyeHeight,radius,speed}=runtime.metrics

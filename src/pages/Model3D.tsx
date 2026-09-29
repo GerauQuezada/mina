@@ -61,10 +61,13 @@ function WalkController({active,runtime,move,onPosition,onLock,startOverride,res
     camera.getWorldDirection(tempForward);tempForward.normalize();tempPlanarForward.set(tempForward.x,0,tempForward.z);if(tempPlanarForward.lengthSq()<1e-8)tempPlanarForward.set(0,0,-1);tempPlanarForward.normalize();tempRight.crossVectors(tempPlanarForward,camera.up).normalize()
     const forward=(keys.current.KeyW||keys.current.ArrowUp?1:0)-(keys.current.KeyS||keys.current.ArrowDown?1:0)+move.current.z
     const side=(keys.current.KeyD||keys.current.ArrowRight?1:0)-(keys.current.KeyA||keys.current.ArrowLeft?1:0)+move.current.x
-    tempInput.set(0,0,0).addScaledVector(tempForward,forward).addScaledVector(tempRight,side);if(tempInput.lengthSq()>1)tempInput.normalize()
+    // Keep full walking speed on the horizontal plane even while looking at
+    // the floor or ceiling. Camera pitch only guides which floor level to
+    // follow; it must never make W stall in front of rubble.
+    tempInput.set(0,0,0).addScaledVector(tempPlanarForward,forward).addScaledVector(tempRight,side);if(tempInput.lengthSq()>1)tempInput.normalize()
     const damping=Math.exp(-10*delta);velocity.current.x*=damping;velocity.current.z*=damping
     velocity.current.x+=tempInput.x*runtime.metrics.speed*(1-damping);velocity.current.z+=tempInput.z*runtime.metrics.speed*(1-damping)
-    const verticalSpeed=tempInput.y*runtime.metrics.speed
+    const verticalSpeed=tempForward.y*forward*runtime.metrics.speed
     const steps=Math.max(1,Math.ceil(delta/(1/120)),Math.ceil(velocity.current.length()*delta/(runtime.metrics.radius*.45)));const step=delta/steps
     for(let index=0;index<steps;index++){
       velocity.current.y=verticalSpeed
