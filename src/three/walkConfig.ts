@@ -10,5 +10,6 @@ export const WALK_START_TARGET=new THREE.Vector3(0,0,15)
 
 export const WALK_KEYS=new Set([
   'KeyW','KeyA','KeyS','KeyD',
-  'ArrowUp','ArrowLeft','ArrowDown','ArrowRight'
+  'ArrowUp','ArrowLeft','ArrowDown','ArrowRight',
+  'ShiftLeft','ShiftRight'
 ])

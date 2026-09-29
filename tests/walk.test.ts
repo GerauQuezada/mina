@@ -138,6 +138,12 @@ test('a low ceiling is never selected as floor and cannot be crossed',()=>{
   for(let tick=0;tick<120*3;tick++)stepWalkExplore(position,velocity,runtime,1/120)
   assert.ok(position.z<.05,'a descending roof blocks forward motion before the camera crosses it')
   assert.ok(Math.abs(position.y-runtime.metrics.eyeHeight)<.02,'the underside of a low roof is never mistaken for an upper floor')
+  const crouchedHeight=runtime.metrics.eyeHeight*.44
+  const crouchedPosition=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
+  const crouchedVelocity=new THREE.Vector3(0,0,runtime.metrics.speed)
+  for(let tick=0;tick<120*3;tick++)stepWalkExplore(crouchedPosition,crouchedVelocity,runtime,1/120,crouchedHeight)
+  assert.ok(crouchedPosition.z>.5,'crouching lowers the collider enough to continue under the same roof')
+  assert.ok(Math.abs(crouchedPosition.y-crouchedHeight)<.02,'the camera remains attached to the floor at crouched height')
 })
 
 test('a centered narrow opening is traversable even when both edges are close',()=>{

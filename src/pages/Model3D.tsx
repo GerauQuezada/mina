@@ -8,7 +8,7 @@ import { WALK_KEYS, WALK_START_POSITION, WALK_START_TARGET } from '../three/walk
 import { createRuntime, firstDistance, isWalkPosition, snapStartToFloor, stepWalkExplore, walkTarget, type ModelRuntime } from '../three/walkPhysics'
 
 type Mode='exterior'|'walk'
-type MoveState={x:number;z:number;lookX:number;lookY:number}
+type MoveState={x:number;z:number;lookX:number;lookY:number;crouch:boolean}
 const tempForward=new THREE.Vector3()
 const tempPlanarForward=new THREE.Vector3()
 const tempRight=new THREE.Vector3()
@@ -44,14 +44,15 @@ function ExteriorCamera({active,runtime}:{active:boolean;runtime:ModelRuntime|nu
   return null
 }
 
-function WalkController({active,runtime,move,onPosition,onLock,startOverride,resetKey}:{active:boolean;runtime:ModelRuntime|null;startOverride:THREE.Vector3|null;resetKey:number;move:React.MutableRefObject<MoveState>;onPosition:(position:THREE.Vector3)=>void;onLock:(locked:boolean)=>void}){
+function WalkController({active,runtime,move,onPosition,onLock,onCrouch,startOverride,resetKey}:{active:boolean;runtime:ModelRuntime|null;startOverride:THREE.Vector3|null;resetKey:number;move:React.MutableRefObject<MoveState>;onPosition:(position:THREE.Vector3)=>void;onLock:(locked:boolean)=>void;onCrouch:(active:boolean,height:number)=>void}){
   const {camera,gl}=useThree()
   const keys=useRef<Record<string,boolean>>({})
   const velocity=useRef(new THREE.Vector3())
   const lastPositionReport=useRef(0)
   const startPosition=useRef(new THREE.Vector3())
-  useEffect(()=>{if(!active||!runtime)return;const start=startOverride||snapStartToFloor(runtime,runtime.metrics.eyeHeight);if(!start)return;startPosition.current.copy(start);camera.position.copy(start);camera.near=runtime.metrics.near;camera.far=runtime.metrics.far;camera.up.set(0,1,0);camera.lookAt(startOverride?walkTarget(runtime,startOverride):runtime.detectedTarget||WALK_START_TARGET);camera.updateProjectionMatrix();tempEuler.setFromQuaternion(camera.quaternion,'YXZ');velocity.current.set(0,0,0);onPosition(camera.position)},[active,runtime,camera,onPosition,startOverride,resetKey])
-  useEffect(()=>{if(!active)return;const clear=()=>{keys.current={};velocity.current.set(0,0,0);move.current={x:0,z:0,lookX:0,lookY:0}};clear();const down=(event:KeyboardEvent)=>{if(WALK_KEYS.has(event.code)){event.preventDefault();keys.current[event.code]=true}};const up=(event:KeyboardEvent)=>{if(WALK_KEYS.has(event.code)){event.preventDefault();keys.current[event.code]=false}};addEventListener('blur',clear);document.addEventListener('visibilitychange',clear);addEventListener('keydown',down,{passive:false});addEventListener('keyup',up,{passive:false});return()=>{clear();removeEventListener('blur',clear);document.removeEventListener('visibilitychange',clear);removeEventListener('keydown',down);removeEventListener('keyup',up)}},[active])
+  const currentEyeHeight=useRef(0)
+  useEffect(()=>{if(!active||!runtime)return;const start=startOverride||snapStartToFloor(runtime,runtime.metrics.eyeHeight);if(!start)return;startPosition.current.copy(start);currentEyeHeight.current=runtime.metrics.eyeHeight;camera.position.copy(start);camera.near=runtime.metrics.near;camera.far=runtime.metrics.far;camera.up.set(0,1,0);camera.lookAt(startOverride?walkTarget(runtime,startOverride):runtime.detectedTarget||WALK_START_TARGET);camera.updateProjectionMatrix();tempEuler.setFromQuaternion(camera.quaternion,'YXZ');velocity.current.set(0,0,0);onCrouch(false,currentEyeHeight.current);onPosition(camera.position)},[active,runtime,camera,onPosition,onCrouch,startOverride,resetKey])
+  useEffect(()=>{if(!active)return;const clear=()=>{keys.current={};velocity.current.set(0,0,0);move.current={x:0,z:0,lookX:0,lookY:0,crouch:false}};clear();const down=(event:KeyboardEvent)=>{if(WALK_KEYS.has(event.code)){event.preventDefault();keys.current[event.code]=true}};const up=(event:KeyboardEvent)=>{if(WALK_KEYS.has(event.code)){event.preventDefault();keys.current[event.code]=false}};addEventListener('blur',clear);document.addEventListener('visibilitychange',clear);addEventListener('keydown',down,{passive:false});addEventListener('keyup',up,{passive:false});return()=>{clear();removeEventListener('blur',clear);document.removeEventListener('visibilitychange',clear);removeEventListener('keydown',down);removeEventListener('keyup',up)}},[active])
   useEffect(()=>{if(!active)return;const isTouch=matchMedia('(pointer: coarse), (max-width: 760px)').matches;const pointerLock=()=>{if(!isTouch&&document.pointerLockElement!==gl.domElement)gl.domElement.requestPointerLock?.()?.catch?.(()=>{})};const lockChange=()=>onLock(document.pointerLockElement===gl.domElement);const mouseMove=(event:MouseEvent)=>{if(document.pointerLockElement===gl.domElement){move.current.lookX+=event.movementX;move.current.lookY+=event.movementY}};gl.domElement.addEventListener('mousedown',pointerLock);document.addEventListener('pointerlockchange',lockChange);document.addEventListener('mousemove',mouseMove);return()=>{gl.domElement.removeEventListener('mousedown',pointerLock);document.removeEventListener('pointerlockchange',lockChange);document.removeEventListener('mousemove',mouseMove);if(document.pointerLockElement===gl.domElement)document.exitPointerLock?.();onLock(false)}},[active,gl,move,onLock])
   useFrame(({clock},frameDelta)=>{
     if(!active||!runtime)return
@@ -68,14 +69,17 @@ function WalkController({active,runtime,move,onPosition,onLock,startOverride,res
     const damping=Math.exp(-10*delta);velocity.current.x*=damping;velocity.current.z*=damping
     velocity.current.x+=tempInput.x*runtime.metrics.speed*(1-damping);velocity.current.z+=tempInput.z*runtime.metrics.speed*(1-damping)
     const verticalSpeed=tempForward.y*forward*runtime.metrics.speed
+    const crouching=!!(keys.current.ShiftLeft||keys.current.ShiftRight||move.current.crouch)
+    const targetEyeHeight=runtime.metrics.eyeHeight*(crouching ? .44 : 1)
+    currentEyeHeight.current=THREE.MathUtils.lerp(currentEyeHeight.current||runtime.metrics.eyeHeight,targetEyeHeight,1-Math.exp(-14*delta))
     const steps=Math.max(1,Math.ceil(delta/(1/120)),Math.ceil(velocity.current.length()*delta/(runtime.metrics.radius*.45)));const step=delta/steps
     for(let index=0;index<steps;index++){
       velocity.current.y=verticalSpeed
-      stepWalkExplore(camera.position,velocity.current,runtime,step)
+      stepWalkExplore(camera.position,velocity.current,runtime,step,currentEyeHeight.current)
     }
     const margin=runtime.metrics.eyeHeight*2
     if(camera.position.x<runtime.bounds.min.x-margin||camera.position.x>runtime.bounds.max.x+margin||camera.position.y<runtime.bounds.min.y-margin||camera.position.y>runtime.bounds.max.y+margin||camera.position.z<runtime.bounds.min.z-margin||camera.position.z>runtime.bounds.max.z+margin){camera.position.copy(startPosition.current);velocity.current.set(0,0,0)}
-    if(clock.elapsedTime-lastPositionReport.current>.25){lastPositionReport.current=clock.elapsedTime;onPosition(camera.position)}
+    if(clock.elapsedTime-lastPositionReport.current>.25){lastPositionReport.current=clock.elapsedTime;onPosition(camera.position);onCrouch(crouching,currentEyeHeight.current)}
   })
   return null
 }
@@ -91,16 +95,18 @@ export default function Model3D(){
   const [runtime,setRuntime]=useState<ModelRuntime|null>(null)
   const [position,setPosition]=useState(new THREE.Vector3())
   const [pointerLocked,setPointerLocked]=useState(false)
+  const [crouchState,setCrouchState]=useState({active:false,height:0})
   const wrap=useRef<HTMLDivElement>(null)
   const controls=useRef<any>(null)
-  const move=useRef<MoveState>({x:0,z:0,lookX:0,lookY:0})
+  const move=useRef<MoveState>({x:0,z:0,lookX:0,lookY:0,crouch:false})
   const touchDevice=matchMedia('(pointer: coarse), (max-width: 760px)').matches
   const mobile=matchMedia('(max-width: 760px)').matches||((navigator.hardwareConcurrency||8)<=4)
   const url=new URL(`models/${mobile&&quality==='auto'?'mine-mobile.glb':'mine.glb'}`,document.baseURI).href
   const handlePosition=useCallback((value:THREE.Vector3)=>setPosition(value.clone()),[])
-  const enterWalk=()=>{if(!runtime||!(startOverride||snapStartToFloor(runtime,runtime.metrics.eyeHeight))){setHint('No se encontró un inicio transitable. Usa Elegir entrada y toca el suelo visible.');return}setSelecting(false);setMode('walk');move.current={x:0,z:0,lookX:0,lookY:0}}
-  const exitWalk=()=>{document.exitPointerLock?.();setMode('exterior');move.current={x:0,z:0,lookX:0,lookY:0}}
-  const reloadModel=()=>{setMode('exterior');document.exitPointerLock?.();setRuntime(null);move.current={x:0,z:0,lookX:0,lookY:0};setRetry(value=>value+1)}
+  const handleCrouch=useCallback((active:boolean,height:number)=>setCrouchState({active,height}),[])
+  const enterWalk=()=>{if(!runtime||!(startOverride||snapStartToFloor(runtime,runtime.metrics.eyeHeight))){setHint('No se encontró un inicio transitable. Usa Elegir entrada y toca el suelo visible.');return}setSelecting(false);setMode('walk');move.current={x:0,z:0,lookX:0,lookY:0,crouch:false}}
+  const exitWalk=()=>{document.exitPointerLock?.();setMode('exterior');move.current={x:0,z:0,lookX:0,lookY:0,crouch:false}}
+  const reloadModel=()=>{setMode('exterior');document.exitPointerLock?.();setRuntime(null);move.current={x:0,z:0,lookX:0,lookY:0,crouch:false};setRetry(value=>value+1)}
   const reset=()=>{if(mode==='walk')setResetKey(x=>x+1);else controls.current?.reset()}
   const fullscreen=()=>wrap.current?.requestFullscreen?.()
   const choose=useCallback((point:THREE.Vector3)=>{if(!runtime)return;const eye=point.clone();eye.y+=runtime.metrics.eyeHeight;if(!isWalkPosition(runtime.collider,eye,runtime.metrics)){setHint('Ese punto no tiene espacio libre. Toca otra superficie del suelo.');return}const floor=firstDistance(runtime.collider,eye,new THREE.Vector3(0,-1,0),runtime.metrics.eyeHeight*1.15);if(Math.abs(floor-runtime.metrics.eyeHeight)>runtime.metrics.radius){setHint('Elige una superficie horizontal con suelo.');return}setStartOverride(eye);setSelecting(false);setHint('Entrada elegida. Pulsa Recorrido para caminar desde aquí.')},[runtime])
@@ -113,12 +119,12 @@ export default function Model3D(){
         <Suspense fallback={null}><MineModel url={url} onReady={setRuntime} selecting={selecting} onSelect={choose}/></Suspense>
         <ExteriorCamera active={mode==='exterior'} runtime={runtime}/>
         {mode==='exterior'&&<OrbitControls ref={controls} makeDefault enableDamping enablePan screenSpacePanning touches={{ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN}} target={runtime?.center||new THREE.Vector3()} minDistance={.2} maxDistance={runtime?runtime.sphere.radius*8:240}/>}
-        <WalkController active={mode==='walk'} runtime={runtime} startOverride={startOverride} resetKey={resetKey} move={move} onPosition={handlePosition} onLock={setPointerLocked}/>
+        <WalkController active={mode==='walk'} runtime={runtime} startOverride={startOverride} resetKey={resetKey} move={move} onPosition={handlePosition} onLock={setPointerLocked} onCrouch={handleCrouch}/>
       </Canvas>
       <Loading/>
       {mode==='exterior'&&hint&&<div className="selection-hint glass">{hint}</div>}
       <div className="viewer-actions"><button onClick={()=>controls.current?.dollyIn(1.3)} title="Acercar" disabled={mode==='walk'}><ZoomIn/></button><button onClick={()=>controls.current?.dollyOut(1.3)} title="Alejar" disabled={mode==='walk'}><ZoomOut/></button><button onClick={reset} title="Restablecer"><Undo2/></button><button onClick={fullscreen} title="Pantalla completa"><Expand/></button></div>
-      {mode==='walk'&&<><div className="walk-debug glass"><LocateFixed/><span>X {position.x.toFixed(2)} · Y {position.y.toFixed(2)} · Z {position.z.toFixed(2)}</span><small>Altura {runtime?.metrics.eyeHeight.toFixed(2)} u · Perfil ultracompacto · Suelo activo · {startOverride?'Entrada elegida':'Inicio interior validado'}</small></div><div className="walk-crosshair"/><div className="walk-help glass"><MousePointer2/><span>{touchDevice?'Joystick para caminar · Mira arriba o abajo para cambiar de nivel':pointerLocked?'WASD/Flechas · La inclinación de la mirada guía subidas y bajadas · ESC libera el ratón':'Haz clic dentro del visor para controlar la mirada'}</span></div><button className="exit-walk glass" onClick={exitWalk}><X/> Salir del recorrido</button>{touchDevice&&<MobileWalkControls move={move}/>}</>}
+      {mode==='walk'&&<><div className="walk-debug glass"><LocateFixed/><span>X {position.x.toFixed(2)} · Y {position.y.toFixed(2)} · Z {position.z.toFixed(2)}</span><small>Altura {(crouchState.height||runtime?.metrics.eyeHeight||0).toFixed(2)} u · {crouchState.active?'Agachado':'Perfil ultracompacto'} · Suelo activo · {startOverride?'Entrada elegida':'Inicio interior validado'}</small></div><div className="walk-crosshair"/><div className="walk-help glass"><MousePointer2/><span>{touchDevice?'Joystick para caminar · Mantén AGACHARSE en túneles bajos':pointerLocked?'WASD/Flechas · Mantén SHIFT para agacharte · ESC libera el ratón':'Haz clic dentro del visor para controlar la mirada'}</span></div><button className="exit-walk glass" onClick={exitWalk}><X/> Salir del recorrido</button>{touchDevice&&<MobileWalkControls move={move}/>}</>}
     </div>
     <div className="model-note"><b>{mode==='walk'?'Recorrido interno en primera persona':'Modelo original sin modificaciones'}</b><p>{mode==='walk'?'Las paredes amplias permanecen sólidas. Cinco puntos detectan el suelo y conservan una altura segura sobre huecos del escaneo, sin caídas ni reinicios.':'Pulsa Recorrido para entrar por una abertura transitable detectada en el modelo con movilidad completa.'}</p><button onClick={reloadModel}>Reintentar carga</button></div>
   </div>
@@ -133,5 +139,7 @@ function MobileWalkControls({move}:{move:React.MutableRefObject<MoveState>}){
   const endJoystick=(event:React.PointerEvent<HTMLDivElement>)=>{if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);setKnob({x:0,y:0});move.current.x=0;move.current.z=0}
   const startLook=(event:React.PointerEvent<HTMLDivElement>)=>{event.currentTarget.setPointerCapture(event.pointerId);lookPoint.current={x:event.clientX,y:event.clientY}}
   const moveLook=(event:React.PointerEvent<HTMLDivElement>)=>{if(!event.currentTarget.hasPointerCapture(event.pointerId))return;move.current.lookX+=event.clientX-lookPoint.current.x;move.current.lookY+=event.clientY-lookPoint.current.y;lookPoint.current={x:event.clientX,y:event.clientY}}
-  return <div className="mobile-walk-controls"><div className="virtual-joystick" onPointerDown={startJoystick} onPointerMove={moveJoystick} onPointerUp={endJoystick} onPointerCancel={endJoystick} onLostPointerCapture={()=>{move.current.x=0;move.current.z=0;setKnob({x:0,y:0})}}><i style={{transform:`translate(${knob.x}px,${knob.y}px)`}}/></div><div className="touch-look-zone" onPointerDown={startLook} onPointerMove={moveLook} onPointerUp={e=>e.currentTarget.releasePointerCapture(e.pointerId)} onPointerCancel={e=>{if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}}><span>Arrastra para mirar</span></div></div>
+  const startCrouch=(event:React.PointerEvent<HTMLButtonElement>)=>{event.currentTarget.setPointerCapture(event.pointerId);move.current.crouch=true}
+  const endCrouch=(event:React.PointerEvent<HTMLButtonElement>)=>{if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);move.current.crouch=false}
+  return <div className="mobile-walk-controls"><div className="virtual-joystick" onPointerDown={startJoystick} onPointerMove={moveJoystick} onPointerUp={endJoystick} onPointerCancel={endJoystick} onLostPointerCapture={()=>{move.current.x=0;move.current.z=0;setKnob({x:0,y:0})}}><i style={{transform:`translate(${knob.x}px,${knob.y}px)`}}/></div><button className="crouch-button glass" onPointerDown={startCrouch} onPointerUp={endCrouch} onPointerCancel={endCrouch} onLostPointerCapture={()=>{move.current.crouch=false}}>AGACHARSE</button><div className="touch-look-zone" onPointerDown={startLook} onPointerMove={moveLook} onPointerUp={e=>e.currentTarget.releasePointerCapture(e.pointerId)} onPointerCancel={e=>{if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)}}><span>Arrastra para mirar</span></div></div>
 }

@@ -170,12 +170,12 @@ export function stepWalk(position:THREE.Vector3,velocity:THREE.Vector3,runtime:M
   return position.distanceToSquared(stepPrevious)>1e-12
 }
 
-function broadWallBetween(position:THREE.Vector3,dx:number,dz:number,runtime:ModelRuntime){
+function broadWallBetween(position:THREE.Vector3,dx:number,dz:number,runtime:ModelRuntime,eyeHeight=runtime.metrics.eyeHeight){
   const distance=Math.hypot(dx,dz)
   if(distance<1e-8)return false
   wallDirection.set(dx/distance,0,dz/distance)
   wallSide.set(-wallDirection.z,0,wallDirection.x)
-  const {eyeHeight,radius}=runtime.metrics
+  const {radius}=runtime.metrics
   let rows=0,rowMask=0,columns=0,total=0,centerRows=0
   for(let row=0;row<wallHeightFactors.length;row++){
     let rowHit=false
@@ -201,27 +201,28 @@ function broadWallBetween(position:THREE.Vector3,dx:number,dz:number,runtime:Mod
  * thin supports, scan noise and narrow details are non-blocking. Multiple
  * downward probes keep the camera grounded and bridge holes in the scan.
  */
-export function stepWalkExplore(position:THREE.Vector3,velocity:THREE.Vector3,runtime:ModelRuntime,delta:number){
+export function stepWalkExplore(position:THREE.Vector3,velocity:THREE.Vector3,runtime:ModelRuntime,delta:number,eyeHeightOverride=runtime.metrics.eyeHeight){
   stepPrevious.copy(position)
   const dx=velocity.x*delta,dz=velocity.z*delta
-  if(!broadWallBetween(stepPrevious,dx,dz,runtime)){
+  if(!broadWallBetween(stepPrevious,dx,dz,runtime,eyeHeightOverride)){
     position.x+=dx;position.z+=dz
   }else{
     let avoided=false
-    if(!broadWallBetween(stepPrevious,dx,0,runtime))position.x+=dx
-    if(!broadWallBetween(stepPrevious,0,dz,runtime))position.z+=dz
+    if(!broadWallBetween(stepPrevious,dx,0,runtime,eyeHeightOverride))position.x+=dx
+    if(!broadWallBetween(stepPrevious,0,dz,runtime,eyeHeightOverride))position.z+=dz
     // A local rock can block the center rays even though the gallery remains
     // open beside it. Nudge sideways until the forward path clears; continuous
     // walls only cause sliding along their face and are never crossed.
     if(Math.hypot(position.x-stepPrevious.x,position.z-stepPrevious.z)<Math.hypot(dx,dz)*.1){
       obstacleSide.set(-dz,0,dx).normalize().multiplyScalar(Math.hypot(dx,dz))
-      if(!broadWallBetween(stepPrevious,obstacleSide.x,obstacleSide.z,runtime)){position.x+=obstacleSide.x;position.z+=obstacleSide.z;avoided=true}
-      else if(!broadWallBetween(stepPrevious,-obstacleSide.x,-obstacleSide.z,runtime)){position.x-=obstacleSide.x;position.z-=obstacleSide.z;avoided=true}
+      if(!broadWallBetween(stepPrevious,obstacleSide.x,obstacleSide.z,runtime,eyeHeightOverride)){position.x+=obstacleSide.x;position.z+=obstacleSide.z;avoided=true}
+      else if(!broadWallBetween(stepPrevious,-obstacleSide.x,-obstacleSide.z,runtime,eyeHeightOverride)){position.x-=obstacleSide.x;position.z-=obstacleSide.z;avoided=true}
     }
     if(!avoided){velocity.x*=.35;velocity.z*=.35}
   }
 
-  const {eyeHeight,radius,speed}=runtime.metrics
+  const {radius,speed}=runtime.metrics
+  const eyeHeight=THREE.MathUtils.clamp(eyeHeightOverride,runtime.metrics.eyeHeight*.42,runtime.metrics.eyeHeight)
   // The floor ray must begin above the feet, never above the camera: starting
   // it over the head can mistake a low tunnel ceiling for a higher floor.
   const maxStep=eyeHeight*.8
