@@ -89,3 +89,33 @@ test('look-guided movement follows an upper and lower floor level',()=>{
   for(let tick=0;tick<120*2;tick++){velocity.set(0,-runtime.metrics.speed,-runtime.metrics.speed);stepWalkExplore(position,velocity,runtime,1/120)}
   assert.ok(Math.abs(position.y-runtime.metrics.eyeHeight)<.02,'looking downward while advancing returns to the lower level')
 })
+
+test('a low ceiling is never selected as floor and cannot be crossed',()=>{
+  const scene=new THREE.Group()
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
+  floor.rotation.x=-Math.PI/2
+  const lowRoof=new THREE.Mesh(new THREE.BoxGeometry(10,.1,5),new THREE.MeshBasicMaterial())
+  lowRoof.position.set(0,.52,2.5)
+  scene.add(floor,lowRoof)
+  const runtime=createRuntime(scene)
+  const position=new THREE.Vector3(0,runtime.metrics.eyeHeight,-1)
+  const velocity=new THREE.Vector3(0,0,runtime.metrics.speed)
+  for(let tick=0;tick<120*3;tick++)stepWalkExplore(position,velocity,runtime,1/120)
+  assert.ok(position.z<.05,'a descending roof blocks forward motion before the camera crosses it')
+  assert.ok(Math.abs(position.y-runtime.metrics.eyeHeight)<.02,'the underside of a low roof is never mistaken for an upper floor')
+})
+
+test('the visitor descends from a ledge to real lower ground',()=>{
+  const scene=new THREE.Group()
+  const lowerFloor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))
+  lowerFloor.rotation.x=-Math.PI/2
+  const upperFloor=new THREE.Mesh(new THREE.BoxGeometry(10,.8,5),new THREE.MeshBasicMaterial())
+  upperFloor.position.set(0,.4,-2.5)
+  scene.add(lowerFloor,upperFloor)
+  const runtime=createRuntime(scene)
+  const position=new THREE.Vector3(0,.8+runtime.metrics.eyeHeight,-1)
+  const velocity=new THREE.Vector3(0,-runtime.metrics.speed,runtime.metrics.speed)
+  for(let tick=0;tick<120*4;tick++)stepWalkExplore(position,velocity,runtime,1/120)
+  assert.ok(position.z>.5,'the visitor advances beyond the upper ledge')
+  assert.ok(Math.abs(position.y-runtime.metrics.eyeHeight)<.03,'gravity settles the camera on the lower floor instead of leaving it floating')
+})
