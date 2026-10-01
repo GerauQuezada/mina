@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { api } from '../src/lib/api.ts'
+import { api, today } from '../src/lib/api.ts'
 import { OWNER_EMAIL, WORKSPACE_UPDATED_EVENT, logout } from '../src/lib/cloud.ts'
 import { validateBackup, validDate, validMedia } from '../src/lib/validation.ts'
 import { reportCsv, reportKeys } from '../src/lib/reports.ts'
@@ -70,12 +70,13 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       await assert.rejects(post('/expenses',{laborId:1,name:'Combustible',amount:2,expenseDate:'2026-09-27',expenseTime:'29:00'}),/hora/)
     })
     await t.test('dashboard separates partner share, own labor and owner total', async () => {
+      const currentDate=today()
       const own:any=await post('/labors',{name:'Labor propia',ownershipType:'own',partnerName:'No debe usarse',minePercent:50,partnerPercent:50})
       const labors:any[]=await api('/labors')
       const ownLabor=labors.find(x=>x.id===own.id)
       assert.equal(ownLabor.ownership_type,'own');assert.equal(ownLabor.mine_percent,100);assert.equal(ownLabor.partner_percent,0);assert.equal(ownLabor.partner_name,'Omar Miranda')
-      await post('/production',{laborId:1,date:'2026-09-27',sacks:20})
-      await post('/production',{laborId:own.id,date:'2026-09-27',sacks:30})
+      await post('/production',{laborId:1,date:currentDate,sacks:20})
+      await post('/production',{laborId:own.id,date:currentDate,sacks:30})
       await post('/expenses',{laborId:1,name:'Gasto histórico',amount:100,expenseDate:'2026-08-30',expenseTime:'10:00',category:'Otros',paymentMethod:'Efectivo'})
       const dashboard:any=await api('/dashboard')
       assert.deepEqual(dashboard.ownerProduction,{partnerShareAll:10,ownAll:30,totalAll:40,partnerShareMonth:10,ownMonth:30,totalMonth:40})
