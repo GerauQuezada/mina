@@ -8,12 +8,19 @@ import '../src/styles.css'
 import '../src/styles-premium.css'
 
 const date=new Date().toISOString().slice(0,10)
+const day=(offset:number)=>new Date(Date.now()-offset*86400000).toISOString().slice(0,10)
 let revision=1
 let payload:any={version:2,users:[],labors:[
   {id:1,name:'Galería Esperanza',partner_name:'Elena Rojas',partner_photo:'',code:'GE-01',level:'Nivel 120',location:'Sector Norte',description:'Galería principal',status:'active',mine_percent:50,partner_percent:50,created_at:'2026-09-01 08:00:00'},
   {id:2,name:'Veta Aurora',partner_name:'Carlos Vega',partner_photo:'',code:'VA-02',level:'Nivel 80',location:'Sector Este',description:'Frente activo',status:'active',ownership_type:'partner',mine_percent:60,partner_percent:40,created_at:'2026-09-03 09:00:00'},
   {id:3,name:'Labor Omar',partner_name:'Omar Miranda',partner_photo:'',code:'OM-01',level:'Nivel 60',location:'Sector Central',description:'Labor propia',status:'active',ownership_type:'own',mine_percent:100,partner_percent:0,created_at:'2026-09-04 07:00:00'}
 ],production:[
+  {id:11,labor_id:1,date:day(3),sacks:18,mine_sacks:9,partner_sacks:9,created_at:day(3)+' 08:00:00'},
+  {id:12,labor_id:2,date:day(3),sacks:9,mine_sacks:5.4,partner_sacks:3.6,created_at:day(3)+' 10:00:00'},
+  {id:13,labor_id:1,date:day(2),sacks:24,mine_sacks:12,partner_sacks:12,created_at:day(2)+' 08:00:00'},
+  {id:14,labor_id:3,date:day(2),sacks:21,mine_sacks:21,partner_sacks:0,created_at:day(2)+' 12:00:00'},
+  {id:15,labor_id:2,date:day(1),sacks:22,mine_sacks:13.2,partner_sacks:8.8,created_at:day(1)+' 09:00:00'},
+  {id:16,labor_id:3,date:day(1),sacks:33,mine_sacks:33,partner_sacks:0,created_at:day(1)+' 13:00:00'},
   {id:1,labor_id:1,date,sacks:42,mine_sacks:21,partner_sacks:21,created_at:date+' 08:00:00'},
   {id:2,labor_id:2,date,sacks:31,mine_sacks:18.6,partner_sacks:12.4,created_at:date+' 10:00:00'},
   {id:3,labor_id:3,date,sacks:54,mine_sacks:54,partner_sacks:0,created_at:date+' 13:00:00'}

@@ -82,6 +82,8 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.deepEqual(dashboard.ownerProduction,{partnerShareAll:10,ownAll:30,totalAll:40,partnerShareMonth:10,ownMonth:30,totalMonth:40})
       assert.equal(dashboard.cards.totalSacks,50)
       assert.equal(dashboard.cards.totalExpensesCents,10000)
+      assert.ok(Array.isArray(dashboard.laborProgress)&&dashboard.laborProgress.length>0)
+      assert.equal(dashboard.laborProgress.at(-1)['Labor propia'],30)
     })
     await t.test('backup preserves pictures and legacy history but drops credentials', async () => {
       const backup:any=await api('/backup')
