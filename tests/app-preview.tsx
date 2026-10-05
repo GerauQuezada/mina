@@ -39,6 +39,7 @@ globalThis.fetch=async(input,options={})=>{
   if(url.includes('/rest/v1/mine_workspace?'))return response([{payload:structuredClone(payload),revision}])
   if(url.includes('/rest/v1/rpc/save_mine_workspace')){const body=JSON.parse(String(options.body));payload=body.data;revision++;return response(revision)}
   if(url==='https://api.gold-api.com/price/XAU')return response({name:'Gold',symbol:'XAU',currency:'USD',price:4261.5,updatedAt:new Date().toISOString()})
+  if(url.startsWith('https://api.open-meteo.com/v1/forecast'))return response({current:{temperature_2m:14.2,apparent_temperature:13.1,relative_humidity_2m:72,precipitation:0,weather_code:2,wind_speed_10m:8.4,is_day:1,time:new Date().toISOString()},daily:{temperature_2m_max:[18.4],temperature_2m_min:[7.8]}})
   throw new Error('Solicitud inesperada en vista QA: '+url)
 }
 

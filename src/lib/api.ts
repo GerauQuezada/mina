@@ -1,4 +1,4 @@
-import { login, logout, owner, loadCloud, saveCloud } from './cloud'
+import { login, logout, lockSession, owner, loadCloud, saveCloud } from './cloud'
 import { readAttachment } from './media'
 import { validateBackup, validDate, validTime, requiredText, validMedia, validAttachments } from './validation'
 type Row=Record<string,any>
@@ -29,6 +29,7 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
   if(route==='/auth/login'&&method==='POST')return await login(String(input.email),String(input.password)) as T
   if(route==='/auth/me')return owner() as T
   if(route==='/auth/logout'){await logout();return {ok:true} as T}
+  if(route==='/auth/lock'){lockSession();return {ok:true} as T}
   const user=owner()
   const snapshot=await loadCloud()
   const db:LocalDb={...emptyDb(),...(snapshot.payload||{}),users:[user]}
