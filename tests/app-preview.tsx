@@ -38,12 +38,19 @@ let payload:any={version:2,users:[],labors:[
 ],recoveries:[],liquidations:[]}
 
 const response=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}})
+const partnerToken='11111111-2222-4333-8444-555555555555',partnerPassword='SocioDemo2026!'
 globalThis.fetch=async(input,options={})=>{
   const url=String(input)
   if(url.endsWith('cloud-config.json'))return response({url:'https://visual-test.supabase.co',key:'sb_publishable_visual_test'})
   if(url.includes('/auth/v1/token'))return response({access_token:'visual-token',refresh_token:'visual-refresh',expires_in:3600,user:{id:'visual-owner',email:'madfaygoo@gmail.com'}})
   if(url.includes('/auth/v1/logout'))return response({})
   if(url.includes('/rest/v1/mine_workspace?'))return response([{payload:structuredClone(payload),revision}])
+  if(url.endsWith('/rest/v1/rpc/list_partner_portals'))return response([{labor_id:1,share_token:partnerToken,enabled:true,updated_at:new Date().toISOString()}])
+  if(url.endsWith('/rest/v1/rpc/set_partner_portal'))return response({labor_id:1,share_token:partnerToken,enabled:true,updated_at:new Date().toISOString()})
+  if(url.endsWith('/rest/v1/rpc/disable_partner_portal'))return response(true)
+  if(url.endsWith('/rest/v1/rpc/partner_portal_view')){const body=JSON.parse(String(options.body));if(body.p_token!==partnerToken||body.p_password!==partnerPassword)return response({message:'Enlace o contraseña incorrectos'},401);return response({labor:payload.labors[0],production:payload.production.filter((x:any)=>x.labor_id===1),expenses:payload.expenses.filter((x:any)=>x.labor_id===1)})}
+  if(url.endsWith('/rest/v1/rpc/partner_portal_add_production')){const body=JSON.parse(String(options.body));payload.production.push({id:99,labor_id:1,date:body.p_date,sacks:body.p_sacks,mine_sacks:body.p_sacks/2,partner_sacks:body.p_sacks/2,note:body.p_note,source:'partner_portal',created_at:new Date().toISOString()});return response({ok:true,id:99})}
+  if(url.endsWith('/rest/v1/rpc/partner_portal_add_expense')){const body=JSON.parse(String(options.body));payload.expenses.push({id:99,labor_id:1,name:body.p_name,amount_cents:body.p_amount_cents,expense_date:body.p_date,expense_time:body.p_time,category:body.p_category,payment_method:body.p_payment_method,source:'partner_portal',created_at:new Date().toISOString()});return response({ok:true,id:99})}
   if(url.includes('/rest/v1/rpc/save_mine_workspace')){const body=JSON.parse(String(options.body));payload=body.data;revision++;return response(revision)}
   if(url==='https://api.gold-api.com/price/XAU')return response({name:'Gold',symbol:'XAU',currency:'USD',price:4261.5,updatedAt:new Date().toISOString()})
   if(url.startsWith('https://api.open-meteo.com/v1/forecast'))return response({current:{temperature_2m:14.2,apparent_temperature:13.1,relative_humidity_2m:72,precipitation:0,weather_code:2,wind_speed_10m:8.4,is_day:1,time:new Date().toISOString()},daily:{temperature_2m_max:[18.4],temperature_2m_min:[7.8]}})

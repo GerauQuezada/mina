@@ -14,10 +14,13 @@ import Audit from './pages/Audit'
 import Settings from './pages/Settings'
 import Debts from './pages/Debts'
 import Sales from './pages/Sales'
+import PartnerPortal from './pages/PartnerPortal'
 
 export type User={id:number;name:string;email:string;role:string}
 
-export default function App(){
+export default function App(){return <Routes><Route path="/socio/:token" element={<PartnerPortal/>}/><Route path="*" element={<AdminApp/>}/></Routes>}
+
+function AdminApp(){
   const [user,setUser]=useState<User|null|undefined>(undefined)
   useEffect(()=>{api<User>('/auth/me').then(setUser).catch(()=>setUser(null))},[])
   if(user===undefined)return <div className="boot"><span className="loader"/><p>Preparando la operación…</p></div>

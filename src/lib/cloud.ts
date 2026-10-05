@@ -120,3 +120,34 @@ export async function saveCloud(payload: unknown, revision: number) {
   if(typeof window!=='undefined')window.dispatchEvent(new Event(WORKSPACE_UPDATED_EVENT))
   return result
 }
+
+export type PartnerAccess = { labor_id: number; share_token: string; enabled: boolean; updated_at: string }
+export type PartnerWorkspace = { labor: Record<string, any>; production: Record<string, any>[]; expenses: Record<string, any>[] }
+
+export async function listPartnerAccess(): Promise<PartnerAccess[]> {
+  const rows = await request('/rest/v1/rpc/list_partner_portals', { method: 'POST', body: '{}' }, await token())
+  return Array.isArray(rows) ? rows : []
+}
+
+export async function setPartnerAccess(laborId: number, password: string): Promise<PartnerAccess> {
+  const rows = await request('/rest/v1/rpc/set_partner_portal', { method: 'POST', body: JSON.stringify({ p_labor_id: laborId, p_password: password }) }, await token())
+  const row = Array.isArray(rows) ? rows[0] : rows
+  if (!row?.share_token) throw new Error('No se pudo crear el acceso del socio.')
+  return row
+}
+
+export async function disablePartnerAccess(laborId: number) {
+  return request('/rest/v1/rpc/disable_partner_portal', { method: 'POST', body: JSON.stringify({ p_labor_id: laborId }) }, await token())
+}
+
+export async function openPartnerPortal(shareToken: string, password: string): Promise<PartnerWorkspace> {
+  return request('/rest/v1/rpc/partner_portal_view', { method: 'POST', body: JSON.stringify({ p_token: shareToken, p_password: password }) })
+}
+
+export async function partnerAddProduction(shareToken: string, password: string, input: { date: string; sacks: number; note?: string }) {
+  return request('/rest/v1/rpc/partner_portal_add_production', { method: 'POST', body: JSON.stringify({ p_token: shareToken, p_password: password, p_date: input.date, p_sacks: input.sacks, p_note: input.note || '' }) })
+}
+
+export async function partnerAddExpense(shareToken: string, password: string, input: { name: string; amountCents: number; date: string; time: string; category: string; paymentMethod: string; description?: string; observation?: string }) {
+  return request('/rest/v1/rpc/partner_portal_add_expense', { method: 'POST', body: JSON.stringify({ p_token: shareToken, p_password: password, p_name: input.name, p_amount_cents: input.amountCents, p_date: input.date, p_time: input.time, p_category: input.category, p_payment_method: input.paymentMethod, p_description: input.description || '', p_observation: input.observation || '' }) })
+}
