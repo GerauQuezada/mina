@@ -6,7 +6,6 @@ type PageType = 'production' | 'expenses' | 'recoveries' | 'liquidations' | 'sal
 
 const YELLOW = '#f7bd3b'
 const WHITE = '#eef3f0'
-const GREEN = '#68d391'
 const COLORS = ['#f7bd3b', '#68d391', '#57a8ff', '#f07474', '#b18cff', '#4ed9d0', '#ff9d5c', '#e8fff1']
 
 function groupBy(items: any[], dateKey: string, valueFn: (x: any) => number, value2Fn?: (x: any) => number) {
@@ -91,6 +90,8 @@ export default function TrendCharts({ type, items, currency='PEN' }: { type: Pag
   }, [type, items, currency])
 
   const last = daily[daily.length - 1]
+  const primaryColor = type === 'expenses' ? '#ff5f67' : type === 'sales' || type === 'recoveries' ? '#42d98b' : YELLOW
+  const secondaryColor = type === 'expenses' ? '#ff9d4d' : type === 'production' ? '#62a9ff' : WHITE
   const pct = daily.length > 1 && daily[daily.length - 2].value
     ? Math.round(((last?.value || 0) - daily[daily.length - 2].value) / Math.abs(daily[daily.length - 2].value) * 100)
     : null
@@ -106,37 +107,37 @@ export default function TrendCharts({ type, items, currency='PEN' }: { type: Pag
           <AreaChart data={daily} margin={{ top: 18, right: 12, left: -8, bottom: 0 }}>
             <defs>
               <linearGradient id={`g1-${type}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor={YELLOW} stopOpacity={0.45} />
-                <stop offset="1" stopColor={YELLOW} stopOpacity={0} />
+                <stop offset="0" stopColor={primaryColor} stopOpacity={0.45} />
+                <stop offset="1" stopColor={primaryColor} stopOpacity={0} />
               </linearGradient>
               <linearGradient id={`g2-${type}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor={WHITE} stopOpacity={0.35} />
-                <stop offset="1" stopColor={WHITE} stopOpacity={0} />
+                <stop offset="0" stopColor={secondaryColor} stopOpacity={0.35} />
+                <stop offset="1" stopColor={secondaryColor} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
             <XAxis dataKey="label" stroke="#82908a" fontSize={11} tickLine={false} axisLine={false} minTickGap={28} />
             <YAxis stroke="#82908a" fontSize={11} tickLine={false} axisLine={false} width={52} />
             <Tooltip contentStyle={tooltipStyle} labelFormatter={(_, p: any) => p?.[0]?.payload?.full || ''} />
-            <Area type="monotone" dataKey="value" name={label1} stroke={YELLOW} strokeWidth={3} fill={`url(#g1-${type})`} dot={false} activeDot={{ r: 5, fill: YELLOW, stroke: '#000' }} />
+            <Area type="monotone" dataKey="value" name={label1} stroke={primaryColor} strokeWidth={3} fill={`url(#g1-${type})`} dot={false} activeDot={{ r: 5, fill: primaryColor, stroke: '#000' }} />
             {(type === 'production' || type === 'expenses' || type === 'liquidations') && (
-              <Area type="monotone" dataKey={type === 'production' ? 'socio' : 'value2'} name={label2} stroke={WHITE} strokeWidth={2.5} fill={`url(#g2-${type})`} dot={false} />
+              <Area type="monotone" dataKey={type === 'production' ? 'socio' : 'value2'} name={label2} stroke={secondaryColor} strokeWidth={2.5} fill={`url(#g2-${type})`} dot={false} />
             )}
           </AreaChart>
         </ResponsiveContainer> : <div className="trend-empty"><span>La progresión aparecerá cuando registres el primer valor.</span></div>}
         <div className="trend-legend">
-          <span><i style={{ background: YELLOW }} />{label1}</span>
-          {label2 && <span><i style={{ background: WHITE }} />{label2}</span>}
+          <span><i style={{ background: primaryColor }} />{label1}</span>
+          {label2 && <span><i style={{ background: secondaryColor }} />{label2}</span>}
         </div>
       </article>
 
       <article className="panel glass trend-side">
         <span className="eyebrow">{type === 'expenses' ? 'Resumen de gastos' : 'Resumen'}</span>
         <div className="trend-spark">
-          <svg viewBox="0 0 100 28" width="86" height="24"><polyline points={daily.map((d, i) => `${(i / Math.max(1, daily.length - 1)) * 98 + 1},${26 - (d.value / Math.max(1, ...daily.map((x) => x.value))) * 22}`).join(' ')} fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round" /></svg>
+          <svg viewBox="0 0 100 28" width="86" height="24"><polyline points={daily.map((d, i) => `${(i / Math.max(1, daily.length - 1)) * 98 + 1},${26 - (d.value / Math.max(1, ...daily.map((x) => x.value))) * 22}`).join(' ')} fill="none" stroke={primaryColor} strokeWidth="2.5" strokeLinecap="round" /></svg>
           <span className="trend-pct">{pct===null?'Sin comparación':`${pct>=0?'▲':'▼'} ${Math.abs(pct)}%`}</span>
         </div>
-        <strong className="trend-total">
+        <strong className="trend-total" style={{color:primaryColor}}>
           {type === 'expenses' ? `${currency==='USD'?'US$':'S/'} ${number(total)}` : type === 'sales' ? `${currency==='USD'?'US$':'S/'} ${number(total)}` : type === 'recoveries' ? `${currency==='USD'?'US$':'S/'} ${number(total)}` : `${number(total)} sacos`}
         </strong>
         <small>{type === 'production' ? `Mina: ${number(total2)} · Socio: ${number(total - total2)}` : type === 'expenses' ? `Parte socio: ${currency==='USD'?'US$':'S/'} ${number(total2)}` : type === 'sales' ? `${items.length} ventas · ${currency}` : `${daily.length} días con registro`}</small>

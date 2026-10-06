@@ -26,7 +26,7 @@ export default function Labors(){
     <section className="labor-grid">{filtered.map(l=>{const own=l.ownership_type==='own'||l.partner_percent===0;return <article className={`labor-card glass ${own?'own-labor':''}`} key={l.id}>
       <div className="labor-top"><div className="profile-photo">{own?<Crown/>:l.partner_photo?<img src={l.partner_photo} alt={l.partner_name}/>:<UserRound/>}</div><span className={`badge ${own?'owned':l.status}`}>{own?'100% propia':l.status==='active'?'Activa':'Inactiva'}</span></div>
       <h2>{l.name}</h2><div className="labor-meta"><span>{own?<><Crown/> Labor propia</>:<><UserRound/> {l.partner_name}</>}</span><span><MapPin/> {l.level||l.location||'Sin ubicación'}</span></div>
-      <div className="labor-stats"><div><Package/><span>Producción total</span><b>{number(l.production_total)} sacos</b></div><div><ReceiptText/><span>Gastos acumulados</span><b>{soles(l.expenses_cents)}</b></div></div>
+      <div className="labor-stats"><div><Package/><span>Producción total</span><b className="sack-value">{number(l.production_total)} sacos</b></div><div><ReceiptText/><span>Gastos acumulados</span><b className="expense">{soles(l.expenses_cents)}</b></div></div>
       {own?<div className="own-share"><Crown/> Todos los sacos te pertenecen</div>:<div className="split"><span>Mina <b>{l.mine_percent}%</b></span><i><em style={{width:`${l.mine_percent}%`}}/></i><span>Socio <b>{l.partner_percent}%</b></span></div>}
       <Link to={`/labores/${l.id}`}>Abrir labor <ArrowUpRight/></Link>
     </article>})}{!filtered.length&&<div className="empty wide"><PickEmpty/><b>No hay labores todavía.</b><span>Crea una labor propia o una labor compartida con un socio.</span></div>}</section>

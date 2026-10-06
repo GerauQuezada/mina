@@ -111,6 +111,25 @@ body{background-color:#09090d;background-image:linear-gradient(32deg,transparent
   .dash-grid::-webkit-scrollbar{display:none}
   .dash-grid>.panel{flex:0 0 calc(100vw - 38px);scroll-snap-align:center;border-radius:23px}
 }
+
+/* Semantic color accents: color communicates meaning */
+:root{--money:#42d98b;--money-soft:#42d98b20;--expense:#ff5f67;--expense-soft:#ff5f6720;--sacks:#ffd54a;--sacks-soft:#ffd54a20;--info:#62a9ff}
+.income{color:var(--money)!important;font-weight:800}.expense{color:var(--expense)!important;font-weight:800}.sack-value{color:var(--sacks)!important;font-weight:800}
+.stat.green{color:var(--money)}.stat.green .stat-icon,.stat.green strong{color:var(--money)!important}.stat.green .stat-icon{background:var(--money-soft);box-shadow:0 0 22px #42d98b15}
+.stat.red{color:var(--expense)}.stat.red .stat-icon,.stat.red strong{color:var(--expense)!important}.stat.red .stat-icon{background:var(--expense-soft);box-shadow:0 0 22px #ff5f6715}
+.stat.amber{color:var(--sacks)}.stat.amber .stat-icon,.stat.amber strong{color:var(--sacks)!important}.stat.amber .stat-icon{background:var(--sacks-soft);box-shadow:0 0 22px #ffd54a14}
+.stat.blue{color:var(--info)}.stat.blue .stat-icon,.stat.blue strong{color:var(--info)!important}.stat.blue .stat-icon{background:#62a9ff18}
+.top-kpi-strip article:nth-child(1) strong,.top-kpi-strip article:nth-child(1) small{color:var(--money)}.top-kpi-strip article:nth-child(1):after{background:linear-gradient(90deg,transparent,var(--money),transparent)}
+.top-kpi-strip article:nth-child(2) strong,.top-kpi-strip article:nth-child(2) small{color:var(--sacks)}.top-kpi-strip article:nth-child(2):after{background:linear-gradient(90deg,transparent,var(--sacks),transparent)}
+.top-kpi-strip article:nth-child(3) strong,.top-kpi-strip article:nth-child(3) small{color:var(--expense)}.top-kpi-strip article:nth-child(3):after{background:linear-gradient(90deg,transparent,var(--expense),transparent)}
+.top-kpi-strip article:nth-child(4) strong{color:var(--info)}.top-kpi-strip article:nth-child(4):after{background:linear-gradient(90deg,transparent,var(--info),transparent)}
+.owner-share-card.total,.owner-share-card.partner,.owner-share-card.own{color:var(--sacks);background:radial-gradient(circle at 100% 0,#ffd54a19,transparent 52%),linear-gradient(145deg,#1d1d20,#0b0b0d)}
+.owner-share-card.total strong,.owner-share-card.partner strong,.owner-share-card.own strong,.owner-share-card .owner-share-icon{color:var(--sacks)!important}.owner-share-card.total{border-color:#ffd54a35}
+.gold-card{background:radial-gradient(circle at 5% 90%,#ffd54a1d,transparent 48%),linear-gradient(145deg,#1d1d20,#0b0b0d)}.gold-content .eyebrow,.gold-price,.gold-content a{color:var(--sacks)!important}.gold-orbit div{color:#ffe681;background:linear-gradient(145deg,#ffd54a35,#7f64151c);border-color:#ffd54a65;box-shadow:0 0 46px #ffd54a18}.gold-orbit i{border-color:#ffd54a48}
+.expense-chart .eyebrow{color:var(--expense)}.expense-chart .legend b{color:#ff8d92}.trend-main,.trend-side{isolation:isolate}.trend-badge{border-color:#ffffff25;background:#ffffff0b}
+.labor-stats>div:first-child svg,.partner-summary article:first-child>svg{color:var(--sacks)}.labor-stats>div:nth-child(2) svg,.partner-summary article:nth-child(2)>svg{color:var(--expense)}
+.partner-summary article:first-child strong,.partner-history-grid article:first-child .partner-list b{color:var(--sacks)}.partner-summary article:nth-child(2) strong,.partner-history-grid article:nth-child(2) .partner-list b{color:var(--expense)}
+.model-page .viewer{background:#101114;border-color:#ffffff14;box-shadow:inset 0 0 80px #000,0 24px 60px #000b}.model-page .viewer canvas{background:#101114}.viewer-actions button{background:#111216e8;border-color:#ffffff18}.walk-debug,.walk-help,.exit-walk{background:#0b0c0ed9}
 @media(max-width:380px){.mobile-bottom-nav{left:8px;right:8px}.mobile-balance-card{padding:20px}.mobile-balance-card strong{font-size:29px}.mobile-quick-actions a span{width:38px;height:38px}}
 
 /* Apple-inspired monochrome dark system */
@@ -161,3 +180,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .dash-grid{display:grid;grid-template-columns:minmax(0,1fr);overflow:visible;scroll-snap-type:none;gap:10px;margin:0;padding:0 0 12px;width:100%}
   .dash-grid>.panel{width:100%;min-width:0;max-width:100%;min-height:0;scroll-snap-align:none;flex:none;overflow:hidden;border-radius:21px}
 }
+
+/* Final semantic accents over the monochrome base */
+.income{color:var(--money)!important}.expense{color:var(--expense)!important}.sack-value{color:var(--sacks)!important}
+.stat.green{color:var(--money)}.stat.green .stat-icon,.stat.green strong{color:var(--money)!important}.stat.green .stat-icon{background:var(--money-soft)}
+.stat.red{color:var(--expense)}.stat.red .stat-icon,.stat.red strong{color:var(--expense)!important}.stat.red .stat-icon{background:var(--expense-soft)}
+.stat.amber{color:var(--sacks)}.stat.amber .stat-icon,.stat.amber strong{color:var(--sacks)!important}.stat.amber .stat-icon{background:var(--sacks-soft)}
+.stat.blue{color:var(--info)}.stat.blue .stat-icon,.stat.blue strong{color:var(--info)!important}.stat.blue .stat-icon{background:#62a9ff18}
+.owner-share-card.total,.owner-share-card.partner,.owner-share-card.own{color:var(--sacks);background:radial-gradient(circle at 100% 0,#ffd54a19,transparent 52%),linear-gradient(145deg,#1d1d20,#0b0b0d)}
+.owner-share-card.total strong,.owner-share-card.partner strong,.owner-share-card.own strong,.owner-share-card .owner-share-icon{color:var(--sacks)!important}.owner-share-card.total{border-color:#ffd54a35}
+.gold-card{background:radial-gradient(circle at 5% 90%,#ffd54a1d,transparent 48%),linear-gradient(145deg,#1d1d20,#0b0b0d)}.gold-content .eyebrow,.gold-price,.gold-content a{color:var(--sacks)!important}.gold-orbit div{color:#ffe681;background:linear-gradient(145deg,#ffd54a35,#7f64151c);border-color:#ffd54a65;box-shadow:0 0 46px #ffd54a18}.gold-orbit i{border-color:#ffd54a48}
+.partner-summary article:first-child>svg{color:var(--sacks)}.partner-summary article:nth-child(2)>svg{color:var(--expense)}.partner-summary article:first-child strong,.partner-history-grid article:first-child .partner-list b{color:var(--sacks)}.partner-summary article:nth-child(2) strong,.partner-history-grid article:nth-child(2) .partner-list b{color:var(--expense)}
