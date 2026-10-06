@@ -1,4 +1,4 @@
-export const databaseTables = ['labors', 'production', 'expenses', 'sales', 'audit', 'debts', 'recoveries', 'liquidations'] as const
+export const databaseTables = ['labors', 'production', 'expenses', 'sales', 'audit', 'debts', 'recoveries', 'liquidations', 'withdrawals'] as const
 export function validDate(value: unknown, optional = false): string {
   const text = String(value ?? '')
   if (optional && !text) return ''
@@ -31,7 +31,7 @@ export function validateBackup(input: unknown): Record<string, any[]> {
   const source = input as Record<string, any>
   const output: Record<string, any[]> = {}
   for (const table of databaseTables) {
-    const rows = source[table]
+    const rows = table === 'withdrawals' && source[table] === undefined ? [] : source[table]
     if (!Array.isArray(rows)) throw new Error('Respaldo inválido: ' + table)
     const ids = new Set<number>()
     for (const row of rows) {
