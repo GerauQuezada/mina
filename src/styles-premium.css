@@ -49,3 +49,66 @@ body{background-color:#09090d;background-image:linear-gradient(32deg,transparent
 @media(max-width:760px){.partner-access-status{grid-template-columns:auto 1fr auto}.partner-access-status code{grid-column:1/-1;grid-row:2}.partner-credentials{grid-template-columns:1fr}.partner-credentials>span{grid-column:auto}.partner-entry-grid,.partner-history-grid{grid-template-columns:1fr}.partner-page{padding-top:20px}.partner-welcome{align-items:flex-start;flex-direction:column}.partner-summary{gap:8px}.partner-summary article{padding:14px}.partner-summary strong{font-size:20px}}
 @media(max-width:430px){.partner-login{padding:0}.partner-login-card{min-height:100svh;border-radius:0;padding:25px 18px;display:flex;flex-direction:column;justify-content:center}.partner-portal>header{height:68px;padding:0 12px}.partner-brand>svg{width:36px;height:36px}.partner-portal>header button{font-size:0;padding:9px}.partner-summary{grid-template-columns:1fr}.partner-page{width:calc(100% - 20px)}.partner-entry-grid .panel,.partner-history-grid .panel{padding:16px}}
 @media(prefers-reduced-motion:reduce){.partner-login-glow{animation:none}}
+
+/* Mobile app distribution */
+.mobile-bottom-nav,.mobile-app-overview{display:none}
+@media(max-width:900px){
+  .main{padding-bottom:84px}
+  .mobile-bottom-nav{position:fixed;z-index:24;left:14px;right:14px;bottom:max(10px,env(safe-area-inset-bottom));height:68px;padding:7px 8px;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;border:1px solid #ffffff24;border-radius:22px;background:#17131bdc;box-shadow:0 16px 42px #0009,inset 0 1px #ffffff1c;backdrop-filter:blur(28px) saturate(135%)}
+  .mobile-bottom-nav a,.mobile-bottom-nav button{height:54px;min-width:0;padding:5px 2px;border:0;border-radius:16px;background:transparent;color:#8f8793;text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;cursor:pointer}
+  .mobile-bottom-nav svg{width:19px;height:19px;stroke-width:2}
+  .mobile-bottom-nav span{font-size:9px;font-weight:750}
+  .mobile-bottom-nav a.active{color:#fff;background:linear-gradient(145deg,#ffffff16,#ffffff08);box-shadow:inset 0 1px #ffffff1f}
+  .mobile-bottom-nav a.active svg{color:#f3cd82;filter:drop-shadow(0 0 8px #f3cd8266)}
+}
+@media(max-width:640px){
+  body{background:radial-gradient(circle at 90% 8%,#8f5c7242,transparent 28%),radial-gradient(circle at 8% 42%,#57517635,transparent 35%),#17151b;background-attachment:fixed}
+  .main>header{height:74px;padding:10px 16px;background:#17151bc9;backdrop-filter:blur(28px);border-bottom-color:#ffffff14}
+  .main>header>div:nth-child(2){margin-right:auto;margin-left:9px}
+  .main>header h1{font-size:18px;letter-spacing:-.04em}
+  .header-avatar{width:39px;height:39px;border-radius:50%;border-color:#ffffff2b;background:linear-gradient(145deg,#ffffff19,#ffffff08)}
+  .menu-button{width:39px;height:39px;padding:8px;border-radius:13px;background:#ffffff08;border:1px solid #ffffff13}
+  .page{padding:13px 14px 28px}
+  .data-notice{display:none}
+  .dashboard-intro{margin:5px 2px 15px;align-items:center}
+  .dashboard-intro .eyebrow{display:none}
+  .dashboard-intro h2{font-size:25px;margin:0 0 3px}
+  .dashboard-intro p{font-size:11px;margin:0;color:#aaa2ad}
+  .dashboard-intro .primary{width:42px;height:42px;min-height:42px;padding:0;border-radius:14px;font-size:0;flex:none}
+  .top-kpi-strip{display:none}
+  .mobile-app-overview{display:block;margin-bottom:17px}
+  .mobile-balance-card{min-height:184px;padding:23px;position:relative;overflow:hidden;border-radius:27px;background:radial-gradient(circle at 88% 18%,#ffe0a22c,transparent 24%),linear-gradient(135deg,#734e65,#4a3449 48%,#27212d);border:1px solid #ffffff29;box-shadow:0 19px 45px #09070d70,inset 0 1px #ffffff30;isolation:isolate}
+  .mobile-balance-card:before,.mobile-balance-card i{content:"";position:absolute;border:1px solid #ffffff12;border-radius:50%;z-index:-1}
+  .mobile-balance-card:before{width:210px;height:210px;right:-76px;top:-82px}
+  .mobile-balance-card i{width:145px;height:145px;right:-43px;top:-48px}
+  .mobile-balance-card div{display:flex;flex-direction:column;gap:3px}
+  .mobile-balance-card span{font-size:12px;font-weight:750;color:#fff}
+  .mobile-balance-card small{font-size:9px;color:#d6cbd5}
+  .mobile-balance-card strong{display:block;margin:24px 0 16px;font-size:clamp(30px,9vw,40px);line-height:1;color:#fff;letter-spacing:-.055em;font-variant-numeric:tabular-nums}
+  .mobile-balance-card p{width:max-content;display:flex;align-items:center;gap:6px;margin:0;padding:7px 10px;border-radius:99px;background:#ffffff12;color:#c8efd6;font-size:10px;font-weight:750}
+  .mobile-balance-card p svg{width:14px;height:14px}
+  .mobile-quick-actions{margin-top:-1px;padding:16px 8px 7px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border:1px solid #ffffff19;border-top:0;border-radius:0 0 24px 24px;background:#ffffff0a;box-shadow:0 12px 35px #0003}
+  .mobile-quick-actions a{min-width:0;color:#d9d2dc;text-decoration:none;display:flex;align-items:center;flex-direction:column;gap:7px}
+  .mobile-quick-actions a span{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:#ffffff0c;border:1px solid #ffffff17;color:#f3cd82}
+  .mobile-quick-actions a:active span{transform:scale(.93);background:#ffffff18}
+  .mobile-quick-actions svg{width:19px;height:19px}
+  .mobile-quick-actions b{font-size:9px}
+  .dashboard-hero{gap:10px;margin-bottom:13px}
+  .gold-card,.weather-card{border-radius:22px!important;min-height:0!important}
+  .gold-card{padding:18px!important}
+  .gold-orbit{width:75px;height:105px}
+  .gold-orbit div{width:56px;height:56px;font-size:25px}
+  .gold-price{font-size:28px}
+  .owner-production{margin-top:18px}
+  .owner-production-head{padding:0 2px}
+  .owner-production-head h2,.dashboard-section-heading h2{font-size:20px}
+  .owner-production-grid{gap:9px}
+  .owner-share-card{border-radius:20px}
+  .stat-grid{gap:9px}
+  .stat{border-radius:19px}
+  .dashboard-section-heading{margin-top:22px}
+  .dash-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin-inline:-14px;padding:0 14px 8px;scrollbar-width:none}
+  .dash-grid::-webkit-scrollbar{display:none}
+  .dash-grid>.panel{flex:0 0 calc(100vw - 38px);scroll-snap-align:center;border-radius:23px}
+}
+@media(max-width:380px){.mobile-bottom-nav{left:8px;right:8px}.mobile-balance-card{padding:20px}.mobile-balance-card strong{font-size:29px}.mobile-quick-actions a span{width:38px;height:38px}}
