@@ -89,6 +89,8 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.equal(dashboard.finance.grossSalesCents,50010)
       assert.ok(Array.isArray(dashboard.laborProgress)&&dashboard.laborProgress.length>0)
       assert.equal(dashboard.laborProgress.at(-1)['Labor propia'],30)
+      assert.equal(dashboard.byLabor.find((x:any)=>x.label==='Labor propia')?.isOwn,true)
+      assert.equal(dashboard.byLabor.find((x:any)=>x.label!=='Labor propia')?.isOwn,false)
       await post('/withdrawals',{date:currentDate,time:'11:00',amount:'50',note:'Retiro de prueba'})
       const afterWithdrawal:any=await api('/dashboard?period=month')
       assert.equal(afterWithdrawal.finance.withdrawnCents,5000)
