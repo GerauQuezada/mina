@@ -95,6 +95,23 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.equal(afterWithdrawal.finance.balanceCents,dashboard.finance.balanceCents-5000)
       assert.equal(afterWithdrawal.finance.movements[0].type,'withdrawal')
     })
+    await t.test('closing a truck lot resets current sacks but preserves history and money', async () => {
+      const before:any=await api('/dashboard')
+      const historicalProduction:any[]=await api('/production')
+      await post('/shipments',{date:today(),time:'12:30',note:'Salida de camión de prueba'})
+      const currentLabors:any[]=await api('/labors')
+      const after:any=await api('/dashboard')
+      assert.ok(currentLabors.every(x=>x.production_total===0&&x.available_sacks===0))
+      assert.equal(after.cards.totalSacks,0)
+      assert.equal(after.ownerProduction.totalAll,0)
+      assert.equal(after.finance.grossSalesCents,before.finance.grossSalesCents)
+      assert.equal(after.finance.balanceCents,before.finance.balanceCents)
+      assert.equal((await api<any[]>('/production')).length,historicalProduction.length)
+      assert.equal((await api<any[]>('/shipments')).length,1)
+      await post('/production',{laborId:1,date:today(),sacks:6})
+      assert.equal((await api<any[]>('/labors')).find(x=>x.id===1).production_total,6)
+      assert.equal((await api<any>('/dashboard')).cards.totalSacks,6)
+    })
     await t.test('backup preserves pictures and legacy history but drops credentials', async () => {
       const backup:any=await api('/backup')
       backup.users=[{password:'never-upload-this'}]

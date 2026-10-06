@@ -4,9 +4,9 @@ import { number } from '../lib/api'
 
 type PageType = 'production' | 'expenses' | 'recoveries' | 'liquidations' | 'sales'
 
-const YELLOW = '#f7bd3b'
+const YELLOW = '#c7aa4d'
 const WHITE = '#eef3f0'
-const COLORS = ['#f7bd3b', '#68d391', '#57a8ff', '#f07474', '#b18cff', '#4ed9d0', '#ff9d5c', '#e8fff1']
+const COLORS = ['#c7aa4d', '#6f9b83', '#708ba8', '#a1676b', '#8b8199', '#6e9295', '#9f805d', '#c5c5c8']
 
 function groupBy(items: any[], dateKey: string, valueFn: (x: any) => number, value2Fn?: (x: any) => number) {
   const map = new Map<string, { label: string; value: number; value2: number }>()
@@ -90,8 +90,8 @@ export default function TrendCharts({ type, items, currency='PEN' }: { type: Pag
   }, [type, items, currency])
 
   const last = daily[daily.length - 1]
-  const primaryColor = type === 'expenses' ? '#ff5f67' : type === 'sales' || type === 'recoveries' ? '#42d98b' : YELLOW
-  const secondaryColor = type === 'expenses' ? '#ff9d4d' : type === 'production' ? '#62a9ff' : WHITE
+  const primaryColor = type === 'expenses' ? '#bd6167' : type === 'sales' || type === 'recoveries' ? '#5aa47c' : YELLOW
+  const secondaryColor = type === 'expenses' ? '#a77b5e' : type === 'production' ? '#708ba8' : WHITE
   const pct = daily.length > 1 && daily[daily.length - 2].value
     ? Math.round(((last?.value || 0) - daily[daily.length - 2].value) / Math.abs(daily[daily.length - 2].value) * 100)
     : null

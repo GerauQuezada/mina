@@ -5,7 +5,7 @@ import { api, number, soles } from '../lib/api'
 import PhotoPicker from '../components/PhotoPicker'
 import Modal from '../components/Modal'
 
-export type Labor={id:number;name:string;code?:string;level?:string;location?:string;description?:string;status:string;ownership_type?:'partner'|'own';partner_name:string;partner_photo?:string;mine_percent:number;partner_percent:number;production_total:number;sold_sacks?:number;available_sacks?:number;production_month:number;expenses_cents:number;last_activity:string}
+export type Labor={id:number;name:string;code?:string;level?:string;location?:string;description?:string;status:string;ownership_type?:'partner'|'own';partner_name:string;partner_photo?:string;mine_percent:number;partner_percent:number;production_total:number;historical_production_total?:number;sold_sacks?:number;available_sacks?:number;production_month:number;expenses_cents:number;last_activity:string}
 
 export default function Labors(){
   const [photo,setPhoto]=useState(''),[items,setItems]=useState<Labor[]>([]),[open,setOpen]=useState(false),[search,setSearch]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[kind,setKind]=useState<'partner'|'own'>('partner')

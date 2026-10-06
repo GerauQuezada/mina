@@ -122,7 +122,7 @@ export async function saveCloud(payload: unknown, revision: number) {
 }
 
 export type PartnerAccess = { labor_id: number; share_token: string; enabled: boolean; updated_at: string }
-export type PartnerWorkspace = { labor: Record<string, any>; production: Record<string, any>[]; expenses: Record<string, any>[] }
+export type PartnerWorkspace = { labor: Record<string, any>; production: Record<string, any>[]; productionHistory?: Record<string, any>[]; expenses: Record<string, any>[] }
 
 export async function listPartnerAccess(): Promise<PartnerAccess[]> {
   const rows = await request('/rest/v1/rpc/list_partner_portals', { method: 'POST', body: '{}' }, await token())
@@ -141,7 +141,9 @@ export async function disablePartnerAccess(laborId: number) {
 }
 
 export async function openPartnerPortal(shareToken: string, password: string): Promise<PartnerWorkspace> {
-  return request('/rest/v1/rpc/partner_portal_view', { method: 'POST', body: JSON.stringify({ p_token: shareToken, p_password: password }) })
+  const value=await request('/rest/v1/rpc/partner_portal_view', { method: 'POST', body: JSON.stringify({ p_token: shareToken, p_password: password }) }) as PartnerWorkspace
+  const history=Array.isArray(value.production)?value.production:[],cutoff=Number(value.labor?.production_cutoff_id||0)
+  return {...value,productionHistory:history,production:history.filter(row=>Number(row.id)>cutoff)}
 }
 
 export async function partnerAddProduction(shareToken: string, password: string, input: { date: string; sacks: number; note?: string }) {
