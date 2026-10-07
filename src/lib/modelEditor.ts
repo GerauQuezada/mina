@@ -9,6 +9,7 @@ export type EditorSegment={
   scale:Vector3Tuple
   opacity:number
   visible:boolean
+  storagePath?:string
 }
 
 export type EditorProject={
@@ -57,6 +58,8 @@ export async function deleteEditorAsset(id:string){
   await new Promise<void>((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})
   db.close()
 }
+
+export const validEditorTransform=(value:unknown):value is Vector3Tuple=>Array.isArray(value)&&value.length===3&&value.every(item=>Number.isFinite(Number(item))&&Math.abs(Number(item))<1_000_000)
 
 export const distanceMeters=(a:Vector3Tuple,b:Vector3Tuple,unitMeters=1)=>Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2])*unitMeters
 

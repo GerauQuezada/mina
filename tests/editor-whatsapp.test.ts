@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { distanceMeters, polylineMeters } from '../src/lib/modelEditor'
 import { dailyPrompt, parseFieldReport } from '../src/lib/whatsappParser'
+import { parseReport as parseWebhookReport } from '../supabase/functions/_shared/report-parser.ts'
 
 test('3D measurements respect calibration and curved segments',()=>{
   assert.equal(distanceMeters([0,0,0],[3,4,0],2),10)
@@ -20,4 +21,9 @@ test('WhatsApp report recognizes no work and waste-only days',()=>{
   assert.equal(parseFieldReport('Hoy no se trabajó por lluvia').status,'no_work')
   assert.equal(parseFieldReport('Solo sacamos desmonte').status,'waste_only')
   assert.match(dailyPrompt('Ramal Este'),/Ramal Este/)
+})
+
+test('webhook and dashboard interpret the same field report',()=>{
+  const message='Sacamos 12 sacos; gastamos 45 soles en herramientas'
+  assert.deepEqual(parseWebhookReport(message),Object.fromEntries(Object.entries(parseFieldReport(message)).filter(([key])=>key!=='notes')))
 })

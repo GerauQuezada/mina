@@ -2,9 +2,9 @@ import { login, logout, lockSession, owner, loadCloud, saveCloud } from './cloud
 import { readAttachment } from './media'
 import { validateBackup, validDate, validTime, requiredText, validMedia, validAttachments } from './validation'
 type Row=Record<string,any>
-type LocalDb={version:number;users:Row[];labors:Row[];production:Row[];expenses:Row[];recoveries:Row[];liquidations:Row[];sales:Row[];audit:Row[];debts:Row[];withdrawals:Row[];shipments:Row[];whatsappContacts:Row[];fieldReports:Row[]}
+type LocalDb={version:number;users:Row[];labors:Row[];production:Row[];expenses:Row[];recoveries:Row[];liquidations:Row[];sales:Row[];audit:Row[];debts:Row[];withdrawals:Row[];shipments:Row[];whatsappContacts:Row[];fieldReports:Row[];editorProjects:Row[]}
 
-const emptyDb=():LocalDb=>({version:5,users:[],labors:[],production:[],expenses:[],recoveries:[],liquidations:[],sales:[],audit:[],debts:[],withdrawals:[],shipments:[],whatsappContacts:[],fieldReports:[]})
+const emptyDb=():LocalDb=>({version:6,users:[],labors:[],production:[],expenses:[],recoveries:[],liquidations:[],sales:[],audit:[],debts:[],withdrawals:[],shipments:[],whatsappContacts:[],fieldReports:[],editorProjects:[]})
 const nextId=(rows:Row[])=>Math.max(0,...rows.map(x=>Number(x.id)||0))+1
 const now=()=>new Date().toISOString().replace('T',' ').slice(0,19)
 const addAudit=(db:LocalDb,user:Row|undefined,action:string,entity:string,entityId?:number,details?:unknown)=>db.audit.unshift({id:nextId(db.audit),user_id:user?.id,user_name:user?.name||'Sistema',action,entity,entity_id:entityId||null,details:details?JSON.stringify(details):null,created_at:now()})
@@ -114,6 +114,13 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
   if(route==='/whatsapp/reports'&&method==='POST'){
     const labor=laborFor(db,Number(input.laborId));if(!labor)throw new Error('Selecciona una labor válida.')
     const id=nextId(db.fieldReports),row={id,labor_id:labor.id,date:validDate(input.date),status:['worked','no_work','waste_only'].includes(input.status)?input.status:'worked',raw_text:String(input.rawText||'').slice(0,5000),source:'whatsapp_assistant',created_at:now()};db.fieldReports.push(row);addAudit(db,user,'CREATE','FieldReport',id,{laborId:labor.id,status:row.status});await writeDb(db);return row as T
+  }
+  if(route==='/editor/project'&&method==='GET')return (db.editorProjects[0]||{id:1,version:1,unitMeters:1,segments:[]}) as T
+  if(route==='/editor/project'&&method==='POST'){
+    const unitMeters=Number(input.unitMeters),segments=Array.isArray(input.segments)?input.segments:[]
+    if(!Number.isFinite(unitMeters)||unitMeters<=0||unitMeters>100000||segments.length>100)throw new Error('Proyecto 3D inválido.')
+    const clean=segments.map((segment:Row)=>{const vectors=['position','rotation','scale'].map(key=>segment[key]);if(typeof segment.id!=='string'||!/^[0-9a-f-]{36}$/i.test(segment.id)||vectors.some(value=>!Array.isArray(value)||value.length!==3||value.some(item=>typeof item!=='number'||!Number.isFinite(item)||Math.abs(item)>1_000_000)))throw new Error('Transformación 3D inválida.');const storagePath=String(segment.storagePath||'');if(storagePath&&!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.glb$/i.test(storagePath))throw new Error('Ruta 3D inválida.');return {id:segment.id,name:String(segment.name||'Ampliación').slice(0,120),fileName:String(segment.fileName||'modelo.glb').slice(0,180),createdAt:String(segment.createdAt||now()),position:vectors[0],rotation:vectors[1],scale:vectors[2],opacity:Math.max(.15,Math.min(1,Number(segment.opacity)||1)),visible:segment.visible!==false,storagePath}})
+    const row={id:1,version:1,unitMeters,segments:clean,updated_at:now()};db.editorProjects=[row];addAudit(db,user,'UPDATE','ModelEditorProject',1,{segments:clean.length});await writeDb(db);return row as T
   }
   if(route==='/sales'&&method==='POST'){
     const labor=laborFor(db,Number(input.laborId));if(!labor)throw new Error('Selecciona una labor válida.')

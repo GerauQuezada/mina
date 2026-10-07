@@ -129,6 +129,28 @@ export async function listPartnerAccess(): Promise<PartnerAccess[]> {
   return Array.isArray(rows) ? rows : []
 }
 
+const MODEL_BUCKET='mine-models'
+async function storageRequest(path:string,init:RequestInit={}){
+  const c=await config(),access=await token()
+  const response=await fetch(c.url+'/storage/v1'+path,{...init,headers:{apikey:c.key,Authorization:'Bearer '+access,...(init.headers||{})}})
+  if(!response.ok){const data=await response.json().catch(()=>null);throw new Error(data?.message||data?.error||'No se pudo acceder al almacenamiento privado.')}
+  return response
+}
+export async function uploadEditorModel(id:string,file:Blob){
+  if(file.size>50*1024*1024)throw new Error('La ampliación supera 50 MB. Optimízala o utiliza la copia local.')
+  const path=`${session!.user.id}/${id}.glb`
+  await storageRequest(`/object/${MODEL_BUCKET}/${path}`,{method:'POST',headers:{'Content-Type':'model/gltf-binary','x-upsert':'true'},body:file})
+  return path
+}
+export async function downloadEditorModel(path:string){
+  if(!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.glb$/i.test(path))throw new Error('Ruta de ampliación inválida.')
+  return (await storageRequest(`/object/authenticated/${MODEL_BUCKET}/${path}`)).blob()
+}
+export async function deleteEditorModel(path:string){
+  if(!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.glb$/i.test(path))return
+  await storageRequest(`/object/${MODEL_BUCKET}/${path}`,{method:'DELETE'})
+}
+
 export async function setPartnerAccess(laborId: number, password: string): Promise<PartnerAccess> {
   const rows = await request('/rest/v1/rpc/set_partner_portal', { method: 'POST', body: JSON.stringify({ p_labor_id: laborId, p_password: password }) }, await token())
   const row = Array.isArray(rows) ? rows[0] : rows

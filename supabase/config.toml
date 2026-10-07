@@ -1,0 +1,2 @@
+[functions.whatsapp-assistant]
+verify_jwt = false

@@ -147,3 +147,107 @@ grant execute on function public.disable_partner_portal(bigint) to authenticated
 grant execute on function public.partner_portal_view(text,text) to anon,authenticated;
 grant execute on function public.partner_portal_add_production(text,text,text,numeric,text) to anon,authenticated;
 grant execute on function public.partner_portal_add_expense(text,text,text,bigint,text,text,text,text,text,text) to anon,authenticated;
+
+-- Archivos privados del editor modular 3D. Los modelos nunca son públicos.
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values('mine-models','mine-models',false,52428800,array['model/gltf-binary','application/octet-stream'])
+on conflict(id) do update set public=false,file_size_limit=52428800,allowed_mime_types=excluded.allowed_mime_types;
+
+drop policy if exists "owner_editor_models_select" on storage.objects;
+create policy "owner_editor_models_select" on storage.objects for select to authenticated
+using(bucket_id='mine-models' and (storage.foldername(name))[1]=(select auth.uid())::text and (select auth.jwt()->>'email')='madfaygoo@gmail.com');
+drop policy if exists "owner_editor_models_insert" on storage.objects;
+create policy "owner_editor_models_insert" on storage.objects for insert to authenticated
+with check(bucket_id='mine-models' and (storage.foldername(name))[1]=(select auth.uid())::text and (select auth.jwt()->>'email')='madfaygoo@gmail.com');
+drop policy if exists "owner_editor_models_update" on storage.objects;
+create policy "owner_editor_models_update" on storage.objects for update to authenticated
+using(bucket_id='mine-models' and (storage.foldername(name))[1]=(select auth.uid())::text and (select auth.jwt()->>'email')='madfaygoo@gmail.com')
+with check(bucket_id='mine-models' and (storage.foldername(name))[1]=(select auth.uid())::text and (select auth.jwt()->>'email')='madfaygoo@gmail.com');
+drop policy if exists "owner_editor_models_delete" on storage.objects;
+create policy "owner_editor_models_delete" on storage.objects for delete to authenticated
+using(bucket_id='mine-models' and (storage.foldername(name))[1]=(select auth.uid())::text and (select auth.jwt()->>'email')='madfaygoo@gmail.com');
+
+-- Bandeja técnica e idempotencia para el asistente oficial de WhatsApp.
+create table if not exists public.whatsapp_messages(
+  id bigint generated always as identity primary key,
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  labor_id bigint not null,
+  meta_message_id text not null,
+  from_phone text not null,
+  message_type text not null,
+  raw_text text not null,
+  parsed jsonb not null default '{}'::jsonb,
+  status text not null default 'auto_imported' check(status in('auto_imported','review','ignored','error')),
+  created_at timestamptz not null default now(),
+  unique(owner_id,meta_message_id)
+);
+alter table public.whatsapp_messages enable row level security;
+revoke all on public.whatsapp_messages from anon,authenticated;
+grant select on public.whatsapp_messages to authenticated;
+drop policy if exists "owner_whatsapp_messages_read" on public.whatsapp_messages;
+create policy "owner_whatsapp_messages_read" on public.whatsapp_messages for select to authenticated
+using(owner_id=(select auth.uid()) and (select auth.jwt()->>'email')='madfaygoo@gmail.com');
+
+create table if not exists public.whatsapp_daily_deliveries(
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  labor_id bigint not null,
+  report_date date not null,
+  created_at timestamptz not null default now(),
+  primary key(owner_id,labor_id,report_date)
+);
+alter table public.whatsapp_daily_deliveries enable row level security;
+revoke all on public.whatsapp_daily_deliveries from anon,authenticated;
+
+create or replace function public.claim_whatsapp_daily(p_owner_id uuid,p_labor_id bigint,p_report_date date)
+returns boolean language plpgsql security definer set search_path='' as $$
+declare inserted boolean;
+begin
+  if auth.role()<>'service_role' then raise exception 'Acceso no autorizado'; end if;
+  insert into public.whatsapp_daily_deliveries(owner_id,labor_id,report_date) values(p_owner_id,p_labor_id,p_report_date)
+  on conflict do nothing returning true into inserted;
+  return coalesce(inserted,false);
+end; $$;
+revoke all on function public.claim_whatsapp_daily(uuid,bigint,date) from public;
+grant execute on function public.claim_whatsapp_daily(uuid,bigint,date) to service_role;
+
+create or replace function public.ingest_whatsapp_report(p_phone text,p_message_id text,p_message_type text,p_raw_text text,p_parsed jsonb)
+returns boolean language plpgsql security definer set search_path='' as $$
+declare
+  v_owner uuid;v_labor_id bigint;v_payload jsonb;v_labor jsonb;v_now text;v_date text;v_time text;
+  v_report_id bigint;v_prod_id bigint;v_expense_id bigint;v_audit_id bigint;v_expense jsonb;v_sacks numeric;v_amount bigint;
+begin
+  if auth.role()<>'service_role' then raise exception 'Acceso no autorizado'; end if;
+  if length(p_message_id)<4 or length(p_message_id)>240 or length(p_raw_text)>10000 then raise exception 'Mensaje inválido'; end if;
+  select w.owner_id,w.payload,(contact->>'labor_id')::bigint into v_owner,v_payload,v_labor_id
+  from public.mine_workspace w cross join lateral jsonb_array_elements(coalesce(w.payload->'whatsappContacts','[]'::jsonb)) contact
+  where coalesce((contact->>'enabled')::boolean,true) and regexp_replace(contact->>'phone','\D','','g')=regexp_replace(p_phone,'\D','','g')
+  limit 1 for update of w;
+  if v_owner is null then raise exception 'Teléfono no vinculado'; end if;
+  select value into v_labor from jsonb_array_elements(coalesce(v_payload->'labors','[]'::jsonb)) where (value->>'id')::bigint=v_labor_id;
+  if v_labor is null then raise exception 'Labor no encontrada'; end if;
+  insert into public.whatsapp_messages(owner_id,labor_id,meta_message_id,from_phone,message_type,raw_text,parsed)
+  values(v_owner,v_labor_id,p_message_id,regexp_replace(p_phone,'\D','','g'),left(p_message_type,30),p_raw_text,p_parsed)
+  on conflict(owner_id,meta_message_id) do nothing;
+  if not found then return false; end if;
+  v_now=to_char(timezone('America/Lima',now()),'YYYY-MM-DD HH24:MI:SS');v_date=left(v_now,10);v_time=substring(v_now from 12 for 5);
+  select coalesce(max((value->>'id')::bigint),0)+1 into v_report_id from jsonb_array_elements(coalesce(v_payload->'fieldReports','[]'::jsonb));
+  v_payload=jsonb_set(v_payload,'{fieldReports}',coalesce(v_payload->'fieldReports','[]'::jsonb)||jsonb_build_array(jsonb_build_object('id',v_report_id,'labor_id',v_labor_id,'date',v_date,'status',coalesce(p_parsed->>'status','worked'),'raw_text',left(p_raw_text,5000),'source','whatsapp_ai','created_at',v_now)),true);
+  v_sacks=case when jsonb_typeof(p_parsed->'sacks')='number' then (p_parsed->>'sacks')::numeric else null end;
+  if v_sacks>0 then
+    select coalesce(max((value->>'id')::bigint),0)+1 into v_prod_id from jsonb_array_elements(coalesce(v_payload->'production','[]'::jsonb));
+    v_payload=jsonb_set(v_payload,'{production}',coalesce(v_payload->'production','[]'::jsonb)||jsonb_build_array(jsonb_build_object('id',v_prod_id,'labor_id',v_labor_id,'date',v_date,'sacks',v_sacks,'mine_percent',(v_labor->>'mine_percent')::numeric,'partner_percent',(v_labor->>'partner_percent')::numeric,'mine_sacks',v_sacks*(v_labor->>'mine_percent')::numeric/100,'partner_sacks',v_sacks*(v_labor->>'partner_percent')::numeric/100,'note','Importado automáticamente desde WhatsApp','created_by',null,'source','whatsapp_ai','created_at',v_now)),true);
+  end if;
+  for v_expense in select value from jsonb_array_elements(coalesce(p_parsed->'expenses','[]'::jsonb)) loop
+    v_amount=round(greatest(0,coalesce((v_expense->>'amount')::numeric,0))*100);
+    if v_amount>0 then
+      select coalesce(max((value->>'id')::bigint),0)+1 into v_expense_id from jsonb_array_elements(coalesce(v_payload->'expenses','[]'::jsonb));
+      v_payload=jsonb_set(v_payload,'{expenses}',coalesce(v_payload->'expenses','[]'::jsonb)||jsonb_build_array(jsonb_build_object('id',v_expense_id,'labor_id',v_labor_id,'name',left(coalesce(v_expense->>'name','Gasto informado por WhatsApp'),160),'amount_cents',v_amount,'description','','expense_date',v_date,'expense_time',v_time,'category',left(coalesce(v_expense->>'category','Otros'),80),'payment_method','Por confirmar','observation','Importado automáticamente desde WhatsApp','partner_percent',(v_labor->>'partner_percent')::numeric,'receipt_data_url',null,'created_by',null,'source','whatsapp_ai','created_at',v_now)),true);
+    end if;
+  end loop;
+  select coalesce(max((value->>'id')::bigint),0)+1 into v_audit_id from jsonb_array_elements(coalesce(v_payload->'audit','[]'::jsonb));
+  v_payload=jsonb_set(v_payload,'{audit}',jsonb_build_array(jsonb_build_object('id',v_audit_id,'user_id',null,'user_name',coalesce(v_labor->>'partner_name','WhatsApp IA'),'action','CREATE','entity','WhatsAppFieldReport','entity_id',v_report_id,'details',jsonb_build_object('message_id',p_message_id,'confidence',p_parsed->'confidence')::text,'created_at',v_now))||coalesce(v_payload->'audit','[]'::jsonb),true);
+  update public.mine_workspace set payload=v_payload,revision=revision+1,updated_at=now() where owner_id=v_owner;
+  return true;
+end; $$;
+revoke all on function public.ingest_whatsapp_report(text,text,text,text,jsonb) from public;
+grant execute on function public.ingest_whatsapp_report(text,text,text,text,jsonb) to service_role;

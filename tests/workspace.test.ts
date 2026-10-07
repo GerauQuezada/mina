@@ -124,6 +124,13 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.equal(reports[0].labor_name,'Galería')
       await assert.rejects(post('/whatsapp/contacts',{laborId:1,phone:'123',sendTime:'18:30'}),/número/)
     })
+    await t.test('3D editor metadata syncs without touching the original model', async () => {
+      const segment={id:'11111111-2222-4333-8444-555555555555',name:'Avance norte',fileName:'avance.glb',createdAt:new Date().toISOString(),position:[1,2,3],rotation:[0,.5,0],scale:[1,1,1],opacity:.7,visible:true,storagePath:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee/11111111-2222-4333-8444-555555555555.glb'}
+      const saved:any=await post('/editor/project',{version:1,unitMeters:.98,segments:[segment]})
+      assert.equal(saved.segments[0].name,'Avance norte')
+      assert.equal((await api<any>('/editor/project')).unitMeters,.98)
+      await assert.rejects(post('/editor/project',{unitMeters:1,segments:[{...segment,position:[1,2,Infinity]}]}),/inválida/)
+    })
     await t.test('backup preserves pictures and legacy history but drops credentials', async () => {
       const backup:any=await api('/backup')
       backup.users=[{password:'never-upload-this'}]
@@ -135,6 +142,7 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.equal(payload.recoveries.length,1)
       assert.equal(payload.whatsappContacts.length,1)
       assert.equal(payload.fieldReports.length,1)
+      assert.equal(payload.editorProjects.length,1)
       const before=saves
       await assert.rejects(post('/backup',{...backup,debts:[{id:1,amount_cents:-1}]}))
       assert.equal(saves,before)
