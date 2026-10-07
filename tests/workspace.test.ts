@@ -114,15 +114,22 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.equal((await api<any[]>('/labors')).find(x=>x.id===1).production_total,6)
       assert.equal((await api<any>('/dashboard')).cards.totalSacks,6)
     })
-    await t.test('WhatsApp contacts and confirmed field reports stay scoped to a labor', async () => {
-      const contact:any=await post('/whatsapp/contacts',{laborId:1,phone:'+51 964 518 509',sendTime:'18:30',enabled:true})
+    await t.test('multiple WhatsApp chats stay uniquely scoped to the correct labor', async () => {
+      const contact:any=await post('/whatsapp/contacts',{laborId:1,contactName:'Encargado A',phone:'+51 964 518 509',sendTime:'18:30',enabled:true})
       assert.equal(contact.phone,'51964518509')
+      const second:any=await post('/whatsapp/contacts',{laborId:1,contactName:'Encargado B',phone:'+51 964 518 510',sendTime:'19:00',enabled:true})
+      assert.notEqual(second.id,contact.id)
+      await assert.rejects(post('/whatsapp/contacts',{laborId:2,contactName:'Duplicado',phone:'+51 964 518 509',sendTime:'18:30'}),/ya está asignado/)
+      const edited:any=await post('/whatsapp/contacts',{contactId:second.id,laborId:2,contactName:'Encargado B',phone:'+51 964 518 510',sendTime:'19:15',enabled:true})
+      assert.equal(edited.labor_id,2)
       await post('/whatsapp/reports',{laborId:1,date:today(),status:'waste_only',rawText:'Hoy solo sacamos desmonte'})
       const contacts:any[]=await api('/whatsapp/contacts'),reports:any[]=await api('/whatsapp/reports')
-      assert.equal(contacts[0].labor_name,'Galería')
+      assert.equal(contacts.length,2)
+      assert.equal(contacts.find(x=>x.id===contact.id).labor_name,'Galería')
+      assert.equal(contacts.find(x=>x.id===second.id).labor_id,2)
       assert.equal(reports[0].status,'waste_only')
       assert.equal(reports[0].labor_name,'Galería')
-      await assert.rejects(post('/whatsapp/contacts',{laborId:1,phone:'123',sendTime:'18:30'}),/número/)
+      await assert.rejects(post('/whatsapp/contacts',{laborId:1,contactName:'Inválido',phone:'123',sendTime:'18:30'}),/número/)
     })
     await t.test('3D editor metadata syncs without touching the original model', async () => {
       const segment={id:'11111111-2222-4333-8444-555555555555',name:'Avance norte',fileName:'avance.glb',createdAt:new Date().toISOString(),position:[1,2,3],rotation:[0,.5,0],scale:[1,1,1],opacity:.7,visible:true,storagePath:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee/11111111-2222-4333-8444-555555555555.glb'}
@@ -140,7 +147,7 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.deepEqual(payload.users,[])
       assert.equal(payload.labors[0].partner_photo,backup.labors[0].partner_photo)
       assert.equal(payload.recoveries.length,1)
-      assert.equal(payload.whatsappContacts.length,1)
+      assert.equal(payload.whatsappContacts.length,2)
       assert.equal(payload.fieldReports.length,1)
       assert.equal(payload.editorProjects.length,1)
       const before=saves

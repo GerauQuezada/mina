@@ -1,3 +1,5 @@
+import { Matrix4, Vector3 } from 'three'
+
 export type Vector3Tuple=[number,number,number]
 export type EditorSegment={
   id:string
@@ -65,4 +67,24 @@ export const distanceMeters=(a:Vector3Tuple,b:Vector3Tuple,unitMeters=1)=>Math.h
 
 export function polylineMeters(points:Vector3Tuple[],unitMeters=1){
   return points.slice(1).reduce((sum,point,index)=>sum+distanceMeters(points[index],point,unitMeters),0)
+}
+
+function pointFrame(points:Vector3Tuple[]){
+  if(points.length!==3)throw new Error('Selecciona exactamente tres puntos.')
+  const origin=new Vector3(...points[0]),x=new Vector3(...points[1]).sub(origin)
+  const guide=new Vector3(...points[2]).sub(origin)
+  if(x.lengthSq()<1e-10||guide.lengthSq()<1e-10)throw new Error('Los puntos deben estar separados.')
+  x.normalize()
+  const z=new Vector3().crossVectors(x,guide)
+  if(z.lengthSq()<1e-10)throw new Error('Los tres puntos no pueden estar en una misma línea.')
+  z.normalize()
+  const y=new Vector3().crossVectors(z,x).normalize()
+  const frame=new Matrix4().makeBasis(x,y,z)
+  frame.setPosition(origin)
+  return frame
+}
+
+/** Rigid transform that maps three ordered source points onto three ordered target points. */
+export function rigidAlignmentMatrix(source:Vector3Tuple[],target:Vector3Tuple[]){
+  return pointFrame(target).multiply(pointFrame(source).invert())
 }

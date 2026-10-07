@@ -106,9 +106,19 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
   if(route==='/whatsapp/contacts'&&method==='POST'){
     const labor=laborFor(db,Number(input.laborId));if(!labor)throw new Error('Selecciona una labor válida.')
     const phone=String(input.phone||'').replace(/\D/g,'');if(phone.length<9||phone.length>15)throw new Error('Introduce el número con código de país, por ejemplo 51964518509.')
-    const previous=db.whatsappContacts.find(x=>Number(x.labor_id)===labor.id),row={id:previous?.id||nextId(db.whatsappContacts),labor_id:labor.id,phone,send_time:validTime(input.sendTime||'18:00'),enabled:input.enabled!==false,updated_at:now()}
+    const contactId=Number(input.contactId||0),previous=contactId?db.whatsappContacts.find(x=>Number(x.id)===contactId):undefined
+    if(contactId&&!previous)throw new Error('El contacto que intentas editar ya no existe.')
+    const duplicate=db.whatsappContacts.find(x=>x.phone===phone&&Number(x.id)!==contactId)
+    if(duplicate)throw new Error('Ese WhatsApp ya está asignado a otra labor. Cada número debe identificar una sola labor para que la IA no mezcle reportes.')
+    const contactName=requiredText(input.contactName||'Socio','Nombre del contacto').slice(0,80)
+    const row={id:previous?.id||nextId(db.whatsappContacts),labor_id:labor.id,contact_name:contactName,phone,send_time:validTime(input.sendTime||'18:00'),enabled:input.enabled!==false,updated_at:now()}
     if(previous)Object.assign(previous,row);else db.whatsappContacts.push(row)
-    addAudit(db,user,previous?'UPDATE':'CREATE','WhatsAppContact',row.id,{laborId:labor.id});await writeDb(db);return row as T
+    addAudit(db,user,previous?'UPDATE':'CREATE','WhatsAppContact',row.id,{laborId:labor.id,phone});await writeDb(db);return row as T
+  }
+  const whatsappContactDelete=route.match(/^\/whatsapp\/contacts\/(\d+)$/)
+  if(whatsappContactDelete&&method==='DELETE'){
+    const id=Number(whatsappContactDelete[1]),index=db.whatsappContacts.findIndex(x=>Number(x.id)===id);if(index<0)throw new Error('Contacto no encontrado.')
+    const [removed]=db.whatsappContacts.splice(index,1);addAudit(db,user,'DELETE','WhatsAppContact',id,{laborId:removed.labor_id,phone:removed.phone});await writeDb(db);return {ok:true} as T
   }
   if(route==='/whatsapp/reports'&&method==='GET')return db.fieldReports.slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))).map(row=>({...row,labor_name:laborFor(db,Number(row.labor_id))?.name||'Labor eliminada'})) as T
   if(route==='/whatsapp/reports'&&method==='POST'){

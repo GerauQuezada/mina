@@ -1,12 +1,24 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { distanceMeters, polylineMeters } from '../src/lib/modelEditor'
+import { distanceMeters, polylineMeters, rigidAlignmentMatrix } from '../src/lib/modelEditor'
+import { Vector3 } from 'three'
 import { dailyPrompt, parseFieldReport } from '../src/lib/whatsappParser'
 import { parseReport as parseWebhookReport } from '../supabase/functions/_shared/report-parser.ts'
 
 test('3D measurements respect calibration and curved segments',()=>{
   assert.equal(distanceMeters([0,0,0],[3,4,0],2),10)
   assert.equal(polylineMeters([[0,0,0],[3,0,0],[3,4,0]],.5),3.5)
+})
+
+test('three-point alignment maps an imported scan onto matching mine references',()=>{
+  const source:[[number,number,number],[number,number,number],[number,number,number]]=[[0,0,0],[1,0,0],[0,1,0]]
+  const target:[[number,number,number],[number,number,number],[number,number,number]]=[[10,2,-3],[10,2,-2],[10,3,-3]]
+  const matrix=rigidAlignmentMatrix(source,target)
+  source.forEach((point,index)=>{
+    const aligned=new Vector3(...point).applyMatrix4(matrix)
+    assert.ok(aligned.distanceTo(new Vector3(...target[index]))<1e-8)
+  })
+  assert.throws(()=>rigidAlignmentMatrix([[0,0,0],[1,0,0],[2,0,0]],target),/misma línea/)
 })
 
 test('WhatsApp report extracts sacks and categorized expenses',()=>{
