@@ -4,6 +4,7 @@ import { distanceMeters, polylineMeters, rigidAlignmentMatrix } from '../src/lib
 import { Vector3 } from 'three'
 import { dailyPrompt, parseFieldReport } from '../src/lib/whatsappParser'
 import { parseReport as parseWebhookReport } from '../supabase/functions/_shared/report-parser.ts'
+import { modelEntryNames } from '../src/lib/modelImport'
 
 test('3D measurements respect calibration and curved segments',()=>{
   assert.equal(distanceMeters([0,0,0],[3,4,0],2),10)
@@ -19,6 +20,11 @@ test('three-point alignment maps an imported scan onto matching mine references'
     assert.ok(aligned.distanceTo(new Vector3(...target[index]))<1e-8)
   })
   assert.throws(()=>rigidAlignmentMatrix([[0,0,0],[1,0,0],[2,0,0]],target),/misma línea/)
+})
+
+test('Polycam ZIP importer finds supported scans and ignores texture files',()=>{
+  const entries={'scan/textures/albedo.jpg':new Uint8Array(), 'scan/model.ply':new Uint8Array(), 'notes.txt':new Uint8Array()}
+  assert.deepEqual(modelEntryNames(entries),['scan/model.ply'])
 })
 
 test('WhatsApp report extracts sacks and categorized expenses',()=>{
