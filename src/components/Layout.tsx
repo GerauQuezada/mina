@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Pickaxe, ChartNoAxesCombined, ReceiptText, HandCoins, BadgeDollarSign, Map, Box, FileChartColumn, History, Settings, LogOut, Menu, X, Mountain } from 'lucide-react'
+import { LayoutDashboard, Pickaxe, ChartNoAxesCombined, ReceiptText, HandCoins, BadgeDollarSign, Map, Box, FileChartColumn, History, Settings, LogOut, Menu, X, Mountain, Blocks, MessageCircleMore } from 'lucide-react'
 import { api } from '../lib/api'
 import type { User } from '../App'
 
-const nav=[['/','Dashboard',LayoutDashboard],['/labores','Labores',Pickaxe],['/produccion','Producción',ChartNoAxesCombined],['/gastos','Gastos',ReceiptText],['/prestamos','Préstamos',HandCoins],['/ventas','Ventas',BadgeDollarSign],['/recorrido','Recorrido 2D',Map],['/modelo-3d','Modelo 3D',Box],['/reportes','Reportes',FileChartColumn],['/historial','Historial',History],['/configuracion','Configuración',Settings]] as const
-const titles:Record<string,string>={'/':'Centro de control','/labores':'Labores mineras','/produccion':'Producción diaria','/gastos':'Gastos por labor','/prestamos':'Préstamos y deudas','/ventas':'Ventas','/recorrido':'Recorrido de la mina','/modelo-3d':'Modelo 3D','/reportes':'Reportes','/historial':'Historial y auditoría','/configuracion':'Configuración'}
+const nav=[['/','Dashboard',LayoutDashboard],['/labores','Labores',Pickaxe],['/produccion','Producción',ChartNoAxesCombined],['/gastos','Gastos',ReceiptText],['/prestamos','Préstamos',HandCoins],['/ventas','Ventas',BadgeDollarSign],['/recorrido','Recorrido 2D',Map],['/modelo-3d','Modelo 3D',Box],['/edicion-3d','Edición 3D',Blocks],['/whatsapp','WhatsApp IA',MessageCircleMore],['/reportes','Reportes',FileChartColumn],['/historial','Historial',History],['/configuracion','Configuración',Settings]] as const
+const titles:Record<string,string>={'/':'Centro de control','/labores':'Labores mineras','/produccion':'Producción diaria','/gastos':'Gastos por labor','/prestamos':'Préstamos y deudas','/ventas':'Ventas','/recorrido':'Recorrido de la mina','/modelo-3d':'Modelo 3D','/edicion-3d':'Edición de ampliaciones','/whatsapp':'Automatización WhatsApp','/reportes':'Reportes','/historial':'Historial y auditoría','/configuracion':'Configuración'}
 
 export default function Layout({user,onLogout}:{user:User;onLogout:()=>void}){const [open,setOpen]=useState(false);const location=useLocation();const title=titles[location.pathname]||'Detalle de labor';async function logout(){await api('/auth/lock',{method:'POST'});onLogout()}
 const currentDate=new Intl.DateTimeFormat('es-PE',{weekday:'long',day:'numeric',month:'long'}).format(new Date())

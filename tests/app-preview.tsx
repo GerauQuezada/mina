@@ -39,8 +39,10 @@ let payload:any={version:2,users:[],labors:[
 
 const response=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}})
 const partnerToken='11111111-2222-4333-8444-555555555555',partnerPassword='SocioDemo2026!'
+const nativeFetch=globalThis.fetch
 globalThis.fetch=async(input,options={})=>{
-  const url=String(input)
+  const url=input instanceof Request?input.url:String(input)
+  if(url.includes('/models/')||url.startsWith('blob:'))return nativeFetch(input,options)
   if(url.endsWith('cloud-config.json'))return response({url:'https://visual-test.supabase.co',key:'sb_publishable_visual_test'})
   if(url.includes('/auth/v1/token'))return response({access_token:'visual-token',refresh_token:'visual-refresh',expires_in:3600,user:{id:'visual-owner',email:'madfaygoo@gmail.com'}})
   if(url.includes('/auth/v1/logout'))return response({})

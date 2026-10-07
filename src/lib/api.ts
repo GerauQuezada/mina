@@ -2,9 +2,9 @@ import { login, logout, lockSession, owner, loadCloud, saveCloud } from './cloud
 import { readAttachment } from './media'
 import { validateBackup, validDate, validTime, requiredText, validMedia, validAttachments } from './validation'
 type Row=Record<string,any>
-type LocalDb={version:number;users:Row[];labors:Row[];production:Row[];expenses:Row[];recoveries:Row[];liquidations:Row[];sales:Row[];audit:Row[];debts:Row[];withdrawals:Row[];shipments:Row[]}
+type LocalDb={version:number;users:Row[];labors:Row[];production:Row[];expenses:Row[];recoveries:Row[];liquidations:Row[];sales:Row[];audit:Row[];debts:Row[];withdrawals:Row[];shipments:Row[];whatsappContacts:Row[];fieldReports:Row[]}
 
-const emptyDb=():LocalDb=>({version:4,users:[],labors:[],production:[],expenses:[],recoveries:[],liquidations:[],sales:[],audit:[],debts:[],withdrawals:[],shipments:[]})
+const emptyDb=():LocalDb=>({version:5,users:[],labors:[],production:[],expenses:[],recoveries:[],liquidations:[],sales:[],audit:[],debts:[],withdrawals:[],shipments:[],whatsappContacts:[],fieldReports:[]})
 const nextId=(rows:Row[])=>Math.max(0,...rows.map(x=>Number(x.id)||0))+1
 const now=()=>new Date().toISOString().replace('T',' ').slice(0,19)
 const addAudit=(db:LocalDb,user:Row|undefined,action:string,entity:string,entityId?:number,details?:unknown)=>db.audit.unshift({id:nextId(db.audit),user_id:user?.id,user_name:user?.name||'Sistema',action,entity,entity_id:entityId||null,details:details?JSON.stringify(details):null,created_at:now()})
@@ -101,6 +101,19 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
     db.shipments.push({id,date:validDate(input.date),time:validTime(input.time),note:String(input.note||''),closed_sacks:closedSacks,remaining_sacks:remainingSacks,production_cutoff_id:productionCutoff,sale_cutoff_id:saleCutoff,summary,created_by:user.id,created_at:now()})
     db.labors.forEach(l=>{l.production_cutoff_id=productionCutoff;l.sale_cutoff_id=saleCutoff;l.cycle_started_at=now();l.updated_at=now()})
     addAudit(db,user,'CREATE','Shipment',id,{closedSacks,remainingSacks,labors:summary.length});await writeDb(db);return {id} as T
+  }
+  if(route==='/whatsapp/contacts'&&method==='GET')return db.whatsappContacts.map(contact=>({...contact,labor_name:laborFor(db,Number(contact.labor_id))?.name||'Labor eliminada'})) as T
+  if(route==='/whatsapp/contacts'&&method==='POST'){
+    const labor=laborFor(db,Number(input.laborId));if(!labor)throw new Error('Selecciona una labor válida.')
+    const phone=String(input.phone||'').replace(/\D/g,'');if(phone.length<9||phone.length>15)throw new Error('Introduce el número con código de país, por ejemplo 51964518509.')
+    const previous=db.whatsappContacts.find(x=>Number(x.labor_id)===labor.id),row={id:previous?.id||nextId(db.whatsappContacts),labor_id:labor.id,phone,send_time:validTime(input.sendTime||'18:00'),enabled:input.enabled!==false,updated_at:now()}
+    if(previous)Object.assign(previous,row);else db.whatsappContacts.push(row)
+    addAudit(db,user,previous?'UPDATE':'CREATE','WhatsAppContact',row.id,{laborId:labor.id});await writeDb(db);return row as T
+  }
+  if(route==='/whatsapp/reports'&&method==='GET')return db.fieldReports.slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))).map(row=>({...row,labor_name:laborFor(db,Number(row.labor_id))?.name||'Labor eliminada'})) as T
+  if(route==='/whatsapp/reports'&&method==='POST'){
+    const labor=laborFor(db,Number(input.laborId));if(!labor)throw new Error('Selecciona una labor válida.')
+    const id=nextId(db.fieldReports),row={id,labor_id:labor.id,date:validDate(input.date),status:['worked','no_work','waste_only'].includes(input.status)?input.status:'worked',raw_text:String(input.rawText||'').slice(0,5000),source:'whatsapp_assistant',created_at:now()};db.fieldReports.push(row);addAudit(db,user,'CREATE','FieldReport',id,{laborId:labor.id,status:row.status});await writeDb(db);return row as T
   }
   if(route==='/sales'&&method==='POST'){
     const labor=laborFor(db,Number(input.laborId));if(!labor)throw new Error('Selecciona una labor válida.')

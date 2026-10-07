@@ -114,6 +114,16 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.equal((await api<any[]>('/labors')).find(x=>x.id===1).production_total,6)
       assert.equal((await api<any>('/dashboard')).cards.totalSacks,6)
     })
+    await t.test('WhatsApp contacts and confirmed field reports stay scoped to a labor', async () => {
+      const contact:any=await post('/whatsapp/contacts',{laborId:1,phone:'+51 964 518 509',sendTime:'18:30',enabled:true})
+      assert.equal(contact.phone,'51964518509')
+      await post('/whatsapp/reports',{laborId:1,date:today(),status:'waste_only',rawText:'Hoy solo sacamos desmonte'})
+      const contacts:any[]=await api('/whatsapp/contacts'),reports:any[]=await api('/whatsapp/reports')
+      assert.equal(contacts[0].labor_name,'Galería')
+      assert.equal(reports[0].status,'waste_only')
+      assert.equal(reports[0].labor_name,'Galería')
+      await assert.rejects(post('/whatsapp/contacts',{laborId:1,phone:'123',sendTime:'18:30'}),/número/)
+    })
     await t.test('backup preserves pictures and legacy history but drops credentials', async () => {
       const backup:any=await api('/backup')
       backup.users=[{password:'never-upload-this'}]
@@ -123,6 +133,8 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       assert.deepEqual(payload.users,[])
       assert.equal(payload.labors[0].partner_photo,backup.labors[0].partner_photo)
       assert.equal(payload.recoveries.length,1)
+      assert.equal(payload.whatsappContacts.length,1)
+      assert.equal(payload.fieldReports.length,1)
       const before=saves
       await assert.rejects(post('/backup',{...backup,debts:[{id:1,amount_cents:-1}]}))
       assert.equal(saves,before)

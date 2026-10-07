@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { api } from './lib/api'
 import AuthPage from './pages/AuthPage'
@@ -15,6 +15,8 @@ import Settings from './pages/Settings'
 import Debts from './pages/Debts'
 import Sales from './pages/Sales'
 import PartnerPortal from './pages/PartnerPortal'
+const ModelEditor=lazy(()=>import('./pages/ModelEditor'))
+const WhatsAppAutomation=lazy(()=>import('./pages/WhatsAppAutomation'))
 
 export type User={id:number;name:string;email:string;role:string}
 
@@ -32,8 +34,11 @@ function AdminApp(){
     <Route path="gastos" element={<RecordsPage type="expenses"/>}/>
     <Route path="ventas" element={<Sales/>}/><Route path="prestamos" element={<Debts/>}/>
     <Route path="recorrido" element={<MineMap/>}/><Route path="modelo-3d" element={<Model3D/>}/>
+    <Route path="edicion-3d" element={<Suspense fallback={<PageLoader/>}><ModelEditor/></Suspense>}/><Route path="whatsapp" element={<Suspense fallback={<PageLoader/>}><WhatsAppAutomation/></Suspense>}/>
     <Route path="reportes" element={<Reports/>}/><Route path="historial" element={<Audit/>}/>
     <Route path="configuracion" element={<Settings user={user}/>}/>
     <Route path="*" element={<Navigate to="/" replace/>}/>
   </Route></Routes>
 }
+
+function PageLoader(){return <div className="boot inline"><span className="loader"/><p>Cargando herramienta…</p></div>}
