@@ -1,0 +1,9 @@
+{
+  "name": "mina-whatsapp-qr",
+  "private": true,
+  "type": "module",
+  "scripts": {"start": "node --env-file=.env --import tsx index.ts", "check": "tsc --noEmit --skipLibCheck --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions index.ts"},
+  "dependencies": {"baileys": "7.0.0-rc14", "pino": "^9.6.0", "qrcode": "^1.5.4", "tsx": "^4.20.5"},
+  "devDependencies": {"typescript": "~5.9.2", "@types/node": "^24.5.2", "@types/qrcode": "^1.5.6"},
+  "engines": {"node": ">=22.13.0"}
+}

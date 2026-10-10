@@ -136,6 +136,10 @@ test('workspace cloud adapter: private access, loans, sales and backups', async 
       const saved:any=await post('/editor/project',{version:1,unitMeters:.98,segments:[segment]})
       assert.equal(saved.segments[0].name,'Avance norte')
       assert.equal((await api<any>('/editor/project')).unitMeters,.98)
+      const gaussian:any=await post('/editor/project',{version:1,unitMeters:.98,scaleVerified:true,segments:[{...segment,format:'splat-ply',storagePath:segment.storagePath.replace('.glb','.ply')}]})
+      assert.equal(gaussian.segments[0].format,'splat-ply')
+      assert.equal((await api<any>('/editor/project')).scaleVerified,true)
+      assert.ok(gaussian.segments[0].storagePath.endsWith('.ply'))
       await assert.rejects(post('/editor/project',{unitMeters:1,segments:[{...segment,position:[1,2,Infinity]}]}),/inválida/)
     })
     await t.test('backup preserves pictures and legacy history but drops credentials', async () => {

@@ -12,11 +12,14 @@ export type EditorSegment={
   opacity:number
   visible:boolean
   storagePath?:string
+  format?:'glb'|'splat-ply'
 }
 
 export type EditorProject={
   version:1
   unitMeters:number
+  scaleVerified?:boolean
+  syncPending?:boolean
   segments:EditorSegment[]
 }
 
@@ -67,6 +70,13 @@ export const distanceMeters=(a:Vector3Tuple,b:Vector3Tuple,unitMeters=1)=>Math.h
 
 export function polylineMeters(points:Vector3Tuple[],unitMeters=1){
   return points.slice(1).reduce((sum,point,index)=>sum+distanceMeters(points[index],point,unitMeters),0)
+}
+
+export function calibratedUnitMeters(points:Vector3Tuple[],realMeters:number){
+  if(points.length<2||points.some(point=>!validEditorTransform(point)))throw new Error('Marca dos puntos válidos para calibrar.')
+  const raw=polylineMeters(points.slice(-2),1),scale=realMeters/raw
+  if(!Number.isFinite(realMeters)||realMeters<=0||raw<1e-9||!Number.isFinite(scale)||scale<=0||scale>100000)throw new Error('Introduce una distancia real válida y puntos separados.')
+  return scale
 }
 
 function pointFrame(points:Vector3Tuple[]){

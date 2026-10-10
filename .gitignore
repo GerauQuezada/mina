@@ -6,3 +6,8 @@ uploads/*
 !uploads/.gitkeep
 *.log
 *.tsbuildinfo
+whatsapp-bridge/.env
+whatsapp-bridge/session/
+whatsapp-bridge/runtime/
+whatsapp-bridge/.venv/
+whatsapp-bridge/__pycache__/

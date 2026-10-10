@@ -129,8 +129,14 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
   if(route==='/editor/project'&&method==='POST'){
     const unitMeters=Number(input.unitMeters),segments=Array.isArray(input.segments)?input.segments:[]
     if(!Number.isFinite(unitMeters)||unitMeters<=0||unitMeters>100000||segments.length>100)throw new Error('Proyecto 3D inválido.')
-    const clean=segments.map((segment:Row)=>{const vectors=['position','rotation','scale'].map(key=>segment[key]);if(typeof segment.id!=='string'||!/^[0-9a-f-]{36}$/i.test(segment.id)||vectors.some(value=>!Array.isArray(value)||value.length!==3||value.some(item=>typeof item!=='number'||!Number.isFinite(item)||Math.abs(item)>1_000_000)))throw new Error('Transformación 3D inválida.');const storagePath=String(segment.storagePath||'');if(storagePath&&!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.glb$/i.test(storagePath))throw new Error('Ruta 3D inválida.');return {id:segment.id,name:String(segment.name||'Ampliación').slice(0,120),fileName:String(segment.fileName||'modelo.glb').slice(0,180),createdAt:String(segment.createdAt||now()),position:vectors[0],rotation:vectors[1],scale:vectors[2],opacity:Math.max(.15,Math.min(1,Number(segment.opacity)||1)),visible:segment.visible!==false,storagePath}})
-    const row={id:1,version:1,unitMeters,segments:clean,updated_at:now()};db.editorProjects=[row];addAudit(db,user,'UPDATE','ModelEditorProject',1,{segments:clean.length});await writeDb(db);return row as T
+    const clean=segments.map((segment:Row)=>{
+      const vectors=['position','rotation','scale'].map(key=>segment[key])
+      if(typeof segment.id!=='string'||!/^[0-9a-f-]{36}$/i.test(segment.id)||vectors.some(value=>!Array.isArray(value)||value.length!==3||value.some(item=>typeof item!=='number'||!Number.isFinite(item)||Math.abs(item)>1_000_000)))throw new Error('Transformación 3D inválida.')
+      const storagePath=String(segment.storagePath||''),format=segment.format==='splat-ply'?'splat-ply':'glb'
+      if(storagePath&&!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(glb|ply)$/i.test(storagePath))throw new Error('Ruta 3D inválida.')
+      return {id:segment.id,name:String(segment.name||'Ampliación').slice(0,120),fileName:String(segment.fileName||'modelo.glb').slice(0,180),format,createdAt:String(segment.createdAt||now()),position:vectors[0],rotation:vectors[1],scale:vectors[2],opacity:Math.max(.15,Math.min(1,Number(segment.opacity)||1)),visible:segment.visible!==false,storagePath}
+    })
+    const row={id:1,version:1,unitMeters,scaleVerified:input.scaleVerified===true,segments:clean,updated_at:now()};db.editorProjects=[row];addAudit(db,user,'UPDATE','ModelEditorProject',1,{segments:clean.length});await writeDb(db);return row as T
   }
   if(route==='/sales'&&method==='POST'){
     const labor=laborFor(db,Number(input.laborId));if(!labor)throw new Error('Selecciona una labor válida.')
